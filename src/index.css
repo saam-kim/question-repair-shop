@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Pretendard", -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+.bg-hero-gradient {
+  background:
+    radial-gradient(1200px 600px at 8% -10%, rgba(37, 99, 235, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(59, 130, 246, 0.10), transparent 55%),
+    linear-gradient(160deg, #eef3fc 0%, #f7f9fd 45%, #ffffff 100%);
+}
