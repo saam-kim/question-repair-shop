@@ -1,0 +1,17 @@
+{
+  "app": {
+    "name": "질문수리소",
+    "url": "https://question-repair-shop.vercel.app",
+    "stack": "Vite"
+  },
+  "tracks": [
+    "security",
+    "edzip",
+    "protection"
+  ],
+  "edzipCase": null,
+  "teacher": {
+    "dormsHandle": ""
+  },
+  "ownershipConfirmed": true
+}

@@ -1,0 +1,573 @@
+{
+  "at": "2026-08-28T10:15:53.446Z",
+  "url": "https://question-repair-shop.vercel.app",
+  "results": [
+    {
+      "id": "sec.header.csp",
+      "status": "pass",
+      "observed": "content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
+      "evidence": {
+        "header": "content-security-policy",
+        "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
+        "observedAt": "2026-08-28T10:15:50.998Z"
+      }
+    },
+    {
+      "id": "sec.header.hsts",
+      "status": "pass",
+      "observed": "strict-transport-security: max-age=63072000; includeSubDomains; preload",
+      "evidence": {
+        "header": "strict-transport-security",
+        "value": "max-age=63072000; includeSubDomains; preload",
+        "observedAt": "2026-08-28T10:15:51.000Z"
+      }
+    },
+    {
+      "id": "sec.header.frame",
+      "status": "pass",
+      "observed": "x-frame-options: DENY",
+      "evidence": {
+        "header": "x-frame-options",
+        "value": "DENY",
+        "observedAt": "2026-08-28T10:15:51.000Z"
+      }
+    },
+    {
+      "id": "sec.header.nosniff",
+      "status": "pass",
+      "observed": "x-content-type-options: nosniff",
+      "evidence": {
+        "header": "x-content-type-options",
+        "value": "nosniff",
+        "observedAt": "2026-08-28T10:15:51.000Z"
+      }
+    },
+    {
+      "id": "sec.header.referrer",
+      "status": "pass",
+      "observed": "referrer-policy: strict-origin-when-cross-origin",
+      "evidence": {
+        "header": "referrer-policy",
+        "value": "strict-origin-when-cross-origin",
+        "observedAt": "2026-08-28T10:15:51.000Z"
+      }
+    },
+    {
+      "id": "sec.header.permissions",
+      "status": "pass",
+      "observed": "permissions-policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+      "evidence": {
+        "header": "permissions-policy",
+        "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+        "observedAt": "2026-08-28T10:15:51.000Z"
+      }
+    },
+    {
+      "id": "sec.fingerprint.powered-by",
+      "status": "pass",
+      "observed": "x-powered-by 미노출(양호)",
+      "evidence": {
+        "poweredBy": null,
+        "server": "Vercel"
+      }
+    },
+    {
+      "id": "sec.transport.https-redirect",
+      "status": "pass",
+      "observed": "HTTP 요청이 HTTPS로 리다이렉트됨 (HTTP 308 -> https://question-repair-shop.vercel.app/)",
+      "evidence": {
+        "httpProbe": "HTTP 308 -> https://question-repair-shop.vercel.app/",
+        "redirectsHttps": true
+      }
+    },
+    {
+      "id": "sec.transport.ssl-valid",
+      "status": "pass",
+      "observed": "TLS 연결 성공 (TLSv1.3)",
+      "evidence": {
+        "protocol": "TLSv1.3",
+        "authorized": true,
+        "authError": null
+      }
+    },
+    {
+      "id": "sec.transport.old-tls",
+      "status": "pass",
+      "observed": "TLS 버전 양호: TLSv1.3",
+      "evidence": {
+        "protocol": "TLSv1.3"
+      }
+    },
+    {
+      "id": "sec.transport.cookie-flags",
+      "status": "na",
+      "observed": "응답에 쿠키 없음",
+      "evidence": {}
+    },
+    {
+      "id": "info.secret-exposed",
+      "status": "pass",
+      "observed": "민감 파일(.env/.git) 노출 없음",
+      "evidence": {
+        "probed": [
+          {
+            "path": "/.env",
+            "httpStatus": 200,
+            "exposed": false
+          },
+          {
+            "path": "/.env.local",
+            "httpStatus": 200,
+            "exposed": false
+          },
+          {
+            "path": "/.env.production",
+            "httpStatus": 200,
+            "exposed": false
+          },
+          {
+            "path": "/.git/config",
+            "httpStatus": 200,
+            "exposed": false
+          },
+          {
+            "path": "/.git/HEAD",
+            "httpStatus": 200,
+            "exposed": false
+          }
+        ],
+        "exposedPaths": []
+      }
+    },
+    {
+      "id": "info.config-exposed",
+      "status": "pass",
+      "observed": "설정 파일 비노출",
+      "evidence": {
+        "exposed": []
+      }
+    },
+    {
+      "id": "info.source-map",
+      "status": "pass",
+      "observed": "소스맵 참조 없음",
+      "evidence": {
+        "sourceMappingURL": false
+      }
+    },
+    {
+      "id": "info.stack-trace",
+      "status": "pass",
+      "observed": "스택트레이스 노출 없음",
+      "evidence": {
+        "stackTrace": false
+      }
+    },
+    {
+      "id": "info.mixed-content",
+      "status": "pass",
+      "observed": "mixed content 없음",
+      "evidence": {
+        "mixedContent": false
+      }
+    },
+    {
+      "id": "cors.policy",
+      "status": "info",
+      "observed": "와일드카드(*) 허용 — 공개 API면 무방, 인증 API면 위험",
+      "evidence": {
+        "allowOrigin": "*",
+        "allowCredentials": false,
+        "reflectsOrigin": false,
+        "wildcard": true
+      }
+    },
+    {
+      "id": "seo.title",
+      "status": "pass",
+      "observed": "<title> 있음",
+      "evidence": {}
+    },
+    {
+      "id": "seo.description",
+      "status": "pass",
+      "observed": "설명 메타",
+      "evidence": {}
+    },
+    {
+      "id": "seo.viewport",
+      "status": "pass",
+      "observed": "viewport 메타",
+      "evidence": {}
+    },
+    {
+      "id": "seo.og",
+      "status": "pass",
+      "observed": "Open Graph 태그",
+      "evidence": {}
+    },
+    {
+      "id": "seo.canonical",
+      "status": "info",
+      "observed": "canonical 링크",
+      "evidence": {}
+    },
+    {
+      "id": "perf.ttfb",
+      "status": "pass",
+      "observed": "응답 시간 607ms",
+      "evidence": {
+        "ms": 607
+      }
+    },
+    {
+      "id": "perf.page-size",
+      "status": "pass",
+      "observed": "문서 크기 1KB",
+      "evidence": {
+        "bytes": 1033
+      }
+    },
+    {
+      "id": "perf.compression",
+      "status": "pass",
+      "observed": "압축: br",
+      "evidence": {
+        "encoding": "br"
+      }
+    },
+    {
+      "id": "legal.privacy-policy",
+      "status": "pass",
+      "observed": "개인정보처리방침 발견(path: /privacy)",
+      "evidence": {
+        "found": true,
+        "via": "path",
+        "where": "/privacy",
+        "status": 200
+      }
+    },
+    {
+      "id": "legal.terms",
+      "status": "pass",
+      "observed": "이용약관 발견(path: /terms)",
+      "evidence": {
+        "found": true,
+        "via": "path",
+        "where": "/terms",
+        "status": 200
+      }
+    },
+    {
+      "id": "legal.contact",
+      "status": "info",
+      "observed": "연락처/문의 정보 안 보임",
+      "evidence": {
+        "found": false
+      }
+    },
+    {
+      "id": "code.rls.anon-read",
+      "status": "na",
+      "observed": "Supabase 공개 자격을 앱에서 찾지 못함(비-Supabase 앱이거나 자격 비노출) — RLS 실측 생략",
+      "evidence": {
+        "supabaseUrl": null,
+        "foundJwts": 0
+      }
+    },
+    {
+      "id": "code.firebase.public-read",
+      "status": "na",
+      "observed": "Firebase 실시간 DB 주소를 앱에서 찾지 못함(비-Firebase 앱이거나 미사용) — 프로브 생략",
+      "evidence": {}
+    },
+    {
+      "id": "code.endpoint.unauth",
+      "status": "na",
+      "observed": "앱에서 내부 API 경로를 찾지 못함 — 미인증 호출 프로브 생략",
+      "evidence": {}
+    },
+    {
+      "id": "code.hardcoded-secret",
+      "status": "pass",
+      "observed": "하드코딩 시크릿 미검출",
+      "evidence": {
+        "hits": []
+      }
+    },
+    {
+      "id": "code.client-secret-leak",
+      "status": "pass",
+      "observed": "클라 시크릿 노출 미검출",
+      "evidence": {
+        "hits": []
+      }
+    },
+    {
+      "id": "code.headers-config",
+      "status": "info",
+      "observed": "헤더 설정 발견: content-security-policy, strict-transport-security, x-frame-options, x-content-type-options, referrer-policy, permissions-policy",
+      "evidence": {
+        "configuredHeaders": {
+          "content-security-policy": [
+            "vercel.json"
+          ],
+          "strict-transport-security": [
+            "vercel.json"
+          ],
+          "x-frame-options": [
+            "vercel.json"
+          ],
+          "x-content-type-options": [
+            "vercel.json"
+          ],
+          "referrer-policy": [
+            "vercel.json"
+          ],
+          "permissions-policy": [
+            "vercel.json"
+          ]
+        },
+        "filesScanned": [
+          "vercel.json"
+        ]
+      }
+    },
+    {
+      "id": "code.dangerous-pattern",
+      "status": "pass",
+      "observed": "위험 코드 패턴 미검출",
+      "evidence": {
+        "hits": []
+      }
+    },
+    {
+      "id": "edzip.1-1",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "edzip.1-2",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "edzip.1-3",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "edzip.2-1",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "edzip.3-1",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "edzip.4-1",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "edzip.5-1",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "edzip.5-2",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "edzip.5-3",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.boundary.client-secrets",
+      "status": "pass",
+      "observed": "배포 산출물에서 비밀 키 미검출",
+      "evidence": {
+        "hits": []
+      }
+    },
+    {
+      "id": "protection.boundary.prompt",
+      "status": "pass",
+      "observed": "배포 산출물에서 프롬프트성 지시문 미검출",
+      "evidence": {
+        "hits": []
+      }
+    },
+    {
+      "id": "protection.boundary.weights",
+      "status": "pass",
+      "observed": "공개 경로에서 모델·데이터 파일 미검출",
+      "evidence": {
+        "hits": []
+      }
+    },
+    {
+      "id": "protection.release.sourcemap",
+      "status": "pass",
+      "observed": "소스맵 미포함",
+      "evidence": {
+        "hits": []
+      }
+    },
+    {
+      "id": "protection.release.debug",
+      "status": "pass",
+      "observed": "디버그 흔적 미검출",
+      "evidence": {
+        "hits": []
+      }
+    },
+    {
+      "id": "protection.release.private-identifiers",
+      "status": "pass",
+      "observed": "내 컴퓨터 경로 미노출",
+      "evidence": {
+        "hits": []
+      }
+    },
+    {
+      "id": "protection.release.separation",
+      "status": "pass",
+      "observed": "산출물에 소스 원본 미포함",
+      "evidence": {
+        "hits": []
+      }
+    },
+    {
+      "id": "protection.release.integrity",
+      "status": "pending",
+      "observed": "아직 지문 기록 없음(protect apply 로 생성)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.notice.visible",
+      "status": "pending",
+      "observed": "아직 사람이 읽는 권리 안내 없음(interview 후 protect apply)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.notice.machine-readable",
+      "status": "pending",
+      "observed": "아직 기계용 안내 없음(protect apply 로 생성)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.evidence.manifest",
+      "status": "pending",
+      "observed": "아직 증거팩 없음(protect apply 로 생성)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.evidence.timestamp",
+      "status": "na",
+      "observed": "시점 증명 없음(선택 사항 — ots 설치 시 자동 생성)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.verify.functional",
+      "status": "pending",
+      "observed": "아직 보호 적용 전(protect apply 후 verify)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.rights.owner-status",
+      "status": "pending",
+      "observed": "권리 설문 미완(dcheck interview 로 진행)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.asset.inventory",
+      "status": "pending",
+      "observed": "권리 설문 미완(dcheck interview 로 진행)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.rights.third-party",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(interview·judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.rights.ai-contribution",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(interview·judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.rights.license-consistency",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(interview·judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.boundary.server",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(interview·judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.boundary.output-leak",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(interview·judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.boundary.api-abuse",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(interview·judge 필요)",
+      "evidence": {}
+    },
+    {
+      "id": "protection.notice.app-footer",
+      "status": "pending",
+      "observed": "아직 판단 안 됨(interview·judge 필요)",
+      "evidence": {}
+    }
+  ],
+  "raw": {
+    "url": "https://question-repair-shop.vercel.app",
+    "finalUrl": "https://question-repair-shop.vercel.app/",
+    "httpStatus": 200,
+    "ttfbMs": 607,
+    "observedHeaders": [
+      "access-control-allow-origin",
+      "age",
+      "cache-control",
+      "content-disposition",
+      "content-encoding",
+      "content-security-policy",
+      "content-type",
+      "date",
+      "etag",
+      "last-modified",
+      "permissions-policy",
+      "referrer-policy",
+      "server",
+      "strict-transport-security",
+      "transfer-encoding",
+      "x-content-type-options",
+      "x-frame-options",
+      "x-vercel-cache",
+      "x-vercel-id"
+    ],
+    "scannedAt": "2026-08-28T10:15:52.518Z"
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 2,
+  "createdAt": "2026-08-28T10:10:39.710Z",
+  "root": ".",
+  "app": {
+    "name": "질문수리소",
+    "url": "https://question-repair-shop.vercel.app",
+    "stack": "Vite",
+    "description": ""
+  },
+  "inspection": {
+    "detected": {
+      "stack": "vite",
+      "framework": "Vite",
+      "applies": [
+        "vite",
+        "firebase",
+        "vercel"
+      ],
+      "buildDir": "dist",
+      "buildCandidates": [
+        "dist"
+      ],
+      "hasPackageJson": true,
+      "hasSupabase": false
+    },
+    "evidence": [
+      {
+        "signal": "firebase",
+        "files": [
+          "package-lock.json",
+          "package.json",
+          "src\\firebase\\auth.ts",
+          "src\\firebase\\config.ts",
+          "src\\firebase\\db.ts",
+          "src\\hooks\\useAnonAuth.ts",
+          "src\\hooks\\useSession.ts",
+          "src\\pages\\student\\steps\\QuestionsStep.tsx",
+          "src\\pages\\student\\steps\\RespondingStep.tsx",
+          "src\\pages\\student\\steps\\RevisionStep.tsx",
+          "src\\pages\\student\\steps\\TopicStep.tsx",
+          "src\\pages\\student\\StudentJoin.tsx"
+        ]
+      },
+      {
+        "signal": "vercel",
+        "files": [
+          "dorms-check.config.json"
+        ]
+      },
+      {
+        "signal": "student-data",
+        "files": [
+          "src\\App.tsx",
+          "src\\components\\StudentTopBar.tsx",
+          "src\\components\\TeamProgressTable.tsx",
+          "src\\firebase\\auth.ts",
+          "src\\firebase\\db.ts",
+          "src\\hooks\\useSession.ts",
+          "src\\lib\\assignmentAlgorithm.ts",
+          "src\\lib\\rehearsalSampleData.ts",
+          "src\\lib\\storage.ts",
+          "src\\lib\\teamStatus.ts",
+          "src\\pages\\RoleSelect.tsx",
+          "src\\pages\\student\\steps\\TopicStep.tsx"
+        ]
+      }
+    ],
+    "filesScanned": 61
+  },
+  "questions": [
+    {
+      "id": "studentData",
+      "ask": "학생의 이름·답안·작성물·학습 기록 등을 처리하나요?",
+      "values": [
+        "yes",
+        "no",
+        "unknown"
+      ]
+    },
+    {
+      "id": "curriculumContent",
+      "ask": "교과 성취기준에 맞춰 제작한 학습 콘텐츠가 앱 안에 포함되나요?",
+      "values": [
+        "yes",
+        "no",
+        "unknown"
+      ]
+    },
+    {
+      "id": "externalTransfer",
+      "ask": "이용자·학생 정보가 호스팅·데이터베이스·외부 AI 등 학교 밖 서비스로 나가나요?",
+      "values": [
+        "yes",
+        "no",
+        "unknown"
+      ]
+    },
+    {
+      "id": "childDirectUse",
+      "ask": "만 14세 미만 학생이 직접 가입하거나 이용하나요?",
+      "values": [
+        "yes",
+        "no",
+        "unknown"
+      ]
+    },
+    {
+      "id": "publicPrivacyUrl",
+      "ask": "외부에서 바로 열 수 있는 개인정보처리방침 주소가 있나요?",
+      "values": [
+        "yes",
+        "no",
+        "unknown"
+      ]
+    }
+  ],
+  "proposedChanges": [
+    {
+      "path": ".gitignore",
+      "action": "append-if-missing",
+      "detail": ".dorms-check/private/ 생성물 Git 추적 차단"
+    },
+    {
+      "path": "docs/privacy-policy.md",
+      "action": "create-by-agent",
+      "detail": "실제 데이터 흐름에 맞는 공개 개인정보처리방침"
+    },
+    {
+      "path": ".dorms-check\\private\\edzip/YYYY-MM-DD/",
+      "action": "generate",
+      "detail": "에듀집 제출용 HWPX·PDF·Markdown 서류와 공식 원본·출처 복사본"
+    }
+  ],
+  "guardrails": [
+    "개인정보·연락처·학교·서명·인영은 수집하지 않고 문서 빈칸으로 남긴다.",
+    "외부 제출·배포·메시지 발송은 하지 않는다.",
+    "적용은 이 계획의 sha256과 --confirm-apply가 모두 맞을 때만 한다."
+  ],
+  "sha256": "dd456364986db436b1fa4dc0c3c342d17953e304539c3d6b4a1bd4424b7bd595"
+}

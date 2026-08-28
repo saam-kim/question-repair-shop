@@ -26,3 +26,4 @@ promo/
 *.sln
 *.sw?
 .vercel
+.dorms-check/private/
