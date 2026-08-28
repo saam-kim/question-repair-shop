@@ -8,33 +8,69 @@ function getAuthInstance(): Auth {
   return authInstance;
 }
 
+function getFallbackUid(): string {
+  try {
+    let uid = localStorage.getItem('qrs_client_uid');
+    if (!uid) {
+      uid = 'usr_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      localStorage.setItem('qrs_client_uid', uid);
+    }
+    return uid;
+  } catch {
+    return 'usr_' + Math.random().toString(36).slice(2, 10);
+  }
+}
+
 let anonAuthPromise: Promise<User> | null = null;
 
 /**
  * 학생/교사 모두 로그인 UI 없이 백그라운드에서 익명 인증을 받는다.
- * RTDB 보안 규칙에서 "이 조는 자신의 데이터만 쓸 수 있다"를 검증하기 위한 최소한의 uid 확보 용도.
- * auth 인스턴스는 실제로 호출되는 시점(컴포넌트 마운트 후)에 생성해,
- * Firebase 설정값이 비어있어도 앱 셸 자체는 렌더링되도록 한다.
+ * 학교 와이파이 방화벽이나 Auth 미설정 상태에서도 수업이 멈추지 않도록
+ * 실패 시 로컬 영구 식별자(Fallback UID)로 즉시 전환한다.
  */
 export function ensureAnonAuth(): Promise<User> {
   if (anonAuthPromise) return anonAuthPromise;
 
-  anonAuthPromise = new Promise<User>((resolve, reject) => {
-    const auth = getAuthInstance();
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        if (user) {
+  anonAuthPromise = new Promise<User>((resolve) => {
+    try {
+      const auth = getAuthInstance();
+      if (auth.currentUser) {
+        return resolve(auth.currentUser);
+      }
+
+      let timeoutId: ReturnType<typeof setTimeout>;
+
+      const unsubscribe = onAuthStateChanged(
+        auth,
+        (user) => {
+          if (user) {
+            clearTimeout(timeoutId);
+            unsubscribe();
+            resolve(user);
+          }
+        },
+        () => {
+          // 리스너 에러 시 폴백
+          clearTimeout(timeoutId);
           unsubscribe();
-          resolve(user);
-        }
-      },
-      reject,
-    );
-    signInAnonymously(auth).catch((err) => {
-      unsubscribe();
-      reject(err);
-    });
+          resolve({ uid: getFallbackUid(), isAnonymous: true } as unknown as User);
+        },
+      );
+
+      // 4초 내에 응답 없거나 에러 시 폴백 전환
+      timeoutId = setTimeout(() => {
+        unsubscribe();
+        resolve({ uid: getFallbackUid(), isAnonymous: true } as unknown as User);
+      }, 4000);
+
+      signInAnonymously(auth).catch(() => {
+        clearTimeout(timeoutId);
+        unsubscribe();
+        resolve({ uid: getFallbackUid(), isAnonymous: true } as unknown as User);
+      });
+    } catch {
+      resolve({ uid: getFallbackUid(), isAnonymous: true } as unknown as User);
+    }
   });
 
   return anonAuthPromise;
