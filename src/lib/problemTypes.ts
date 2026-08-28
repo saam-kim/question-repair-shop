@@ -7,8 +7,8 @@ export interface ProblemTypeInfo {
   /** 비상교육 『사회와 문화』 36쪽 필수 조건 번호 (해당 시) */
   requiredRuleLabel?: string;
   description: string;
-  /** 특정 응답 방식(예: 객관식)에서만 의미가 있는 항목이면 표시 */
-  onlyForScaleType?: 'MULTIPLE_CHOICE';
+  /** 특정 응답 방식(예: 5점 척도)에서만 의미가 있는 항목이면 표시 */
+  onlyForScaleType?: ScaleType[];
 }
 
 export const PROBLEM_TYPES: ProblemTypeInfo[] = [
@@ -38,7 +38,7 @@ export const PROBLEM_TYPES: ProblemTypeInfo[] = [
     severity: 'REQUIRED',
     requiredRuleLabel: '필수 조건 ③ 중복 배제',
     description: '응답 선택지 간에 중복된 내용이 없어야 합니다.',
-    onlyForScaleType: 'MULTIPLE_CHOICE',
+    onlyForScaleType: ['LIKERT_5'],
   },
   {
     id: 'LEADING',
@@ -67,5 +67,7 @@ export function getProblemTypeInfo(id: ProblemType): ProblemTypeInfo {
 
 /** 이 질문의 응답 방식(scaleType)에서 실제로 의미가 있는 문제 유형만 골라준다. */
 export function getApplicableProblemTypes(scaleType: ScaleType): ProblemTypeInfo[] {
-  return PROBLEM_TYPES.filter((p) => !p.onlyForScaleType || p.onlyForScaleType === scaleType);
+  return PROBLEM_TYPES.filter(
+    (p) => !p.onlyForScaleType || p.onlyForScaleType.includes(scaleType),
+  );
 }

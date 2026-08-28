@@ -1,10 +1,12 @@
-import {
+﻿import {
   getFirestore,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
   runTransaction,
+  collection,
   type Firestore,
 } from 'firebase/firestore';
 import { app } from './config';
@@ -33,17 +35,25 @@ function withoutUndefined<T extends Record<string, unknown>>(obj: T): Partial<T>
 export interface QuestionInput {
   text: string;
   scaleType: ScaleType;
-  options?: string[];
+  likertLabels?: string[];
+  hasOtherOption?: boolean;
   unit?: string;
+  options?: string[];
+}
+
+export interface RevisionInput {
+  originalText: string;
+  revisedText: string;
+  revisionReasons: RevisionReason[];
+  scaleType: ScaleType;
+  likertLabels?: string[];
+  hasOtherOption?: boolean;
+  unit?: string;
+  options?: string[];
 }
 
 let dbInstance: Firestore | null = null;
 
-/**
- * Firestore 인스턴스를 실제로 필요한 시점에 생성한다.
- * 모듈 로드 시점에 즉시 getFirestore()를 호출하면 Firebase 설정값이 비어있을 때
- * 앱 전체 렌더링이 막히므로(빈 화면), 사용 시점까지 지연시킨다.
- */
 export function getDb(): Firestore {
   if (!dbInstance) dbInstance = getFirestore(app);
   return dbInstance;
@@ -91,34 +101,69 @@ export async function findSessionByCode(code: string): Promise<string | null> {
   return snap.exists() ? sessionId : null;
 }
 
+/**
+ * 학생이 수업에 참여할 때 조를 찾거나 생성한다.
+ * 동시 접속 30~40명 환경에서 트랜잭션 충돌 시 자동 재시도하며,
+ * 이미 참여 중인 uid가 있으면 기존 조 정보를 재사용한다.
+ */
 export async function joinOrCreateTeam(
   sessionId: string,
   uid: string,
 ): Promise<{ teamId: string; teamNumber: number; nickname: string }> {
+  const db = getDb();
   const sRef = sessionDocRef(sessionId);
 
-  return runTransaction(getDb(), async (tx) => {
-    const sSnap = await tx.get(sRef);
-    const sessionData = sSnap.data() as Session | undefined;
-    if (!sessionData) throw new Error('수업을 찾을 수 없습니다.');
+  // 1. 이미 해당 세션에 참여한 팀이 있는지 확인
+  try {
+    const teamsSnap = await getDocs(collection(db, 'qrsSessions', sessionId, 'teams'));
+    for (const d of teamsSnap.docs) {
+      const data = d.data() as Team;
+      if (data.ownerUid === uid) {
+        return {
+          teamId: d.id,
+          teamNumber: data.teamNumber,
+          nickname: data.nickname,
+        };
+      }
+    }
+  } catch {
+    // 조회 실패 시 새 조 생성으로 진행
+  }
 
-    const teamNumber = (sessionData.teamCounter ?? 0) + 1;
-    const teamId = `team${teamNumber}`;
-    const pool = sessionData.pokemonPool ?? [];
-    const nickname = pool[(teamNumber - 1) % pool.length] ?? `${teamNumber}조`;
+  // 2. 동시 접속 충돌 대비 트랜잭션 재시도 루프
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      return await runTransaction(db, async (tx) => {
+        const sSnap = await tx.get(sRef);
+        const sessionData = sSnap.data() as Session | undefined;
+        if (!sessionData) throw new Error('수업을 찾을 수 없습니다.');
 
-    const team: Team = {
-      teamNumber,
-      nickname,
-      ownerUid: uid,
-      createdAt: Date.now(),
-    };
+        const teamNumber = (sessionData.teamCounter ?? 0) + 1;
+        const teamId = `team${teamNumber}`;
+        const pool = sessionData.pokemonPool ?? [];
+        const nickname = pool[(teamNumber - 1) % pool.length] ?? `${teamNumber}조`;
 
-    tx.update(sRef, { teamCounter: teamNumber });
-    tx.set(teamDocRef(sessionId, teamId), team);
+        const team: Team = {
+          teamNumber,
+          nickname,
+          ownerUid: uid,
+          createdAt: Date.now(),
+        };
 
-    return { teamId, teamNumber, nickname };
-  });
+        tx.update(sRef, { teamCounter: teamNumber });
+        tx.set(teamDocRef(sessionId, teamId), team);
+
+        return { teamId, teamNumber, nickname };
+      });
+    } catch (err) {
+      lastError = err;
+      // 짧은 랜덤 지연 후 재시도
+      await new Promise((r) => setTimeout(r, 100 + Math.random() * 200));
+    }
+  }
+
+  throw lastError ?? new Error('조 배정에 실패했습니다. 다시 시도해주세요.');
 }
 
 export async function setTeamTopic(sessionId: string, teamId: string, topic: string) {
@@ -139,6 +184,8 @@ export async function submitQuestions(
     payload[`questions.${qid}`] = withoutUndefined({
       text: q.text,
       scaleType: q.scaleType,
+      likertLabels: q.likertLabels,
+      hasOtherOption: q.hasOtherOption,
       options: q.options,
       unit: q.unit,
       order: idx + 1,
@@ -165,7 +212,7 @@ export async function submitResponseAndFeedback(
     [`responsesGiven.${targetTeamId}.${questionId}`]: { value, respondedAt: now },
     [`feedbackGiven.${targetTeamId}.${questionId}`]: {
       problemTypes: feedback.problemTypes,
-      comment: feedback.comment,
+      comment: feedback.comment || '',
       createdAt: now,
     },
   };
@@ -180,15 +227,6 @@ export async function markRespondingDone(
   await updateDoc(teamDocRef(sessionId, myTeamId), {
     [`respondingProgress.${targetTeamId}`]: 'DONE',
   });
-}
-
-export interface RevisionInput {
-  originalText: string;
-  revisedText: string;
-  revisionReasons: RevisionReason[];
-  scaleType: ScaleType;
-  options?: string[];
-  unit?: string;
 }
 
 export async function submitRevisions(

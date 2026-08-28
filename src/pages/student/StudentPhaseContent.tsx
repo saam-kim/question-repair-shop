@@ -60,7 +60,7 @@ export function StudentPhaseContent({
       if (!nextTarget) {
         return (
           <WaitingScreen
-            title="배정된 3개 조의 질문에 모두 응답했습니다"
+            title={`배정된 ${targets.length}개 조의 질문에 모두 응답했습니다`}
             description="다른 조가 응답을 마칠 때까지 기다려주세요."
           />
         );

@@ -1,12 +1,12 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { submitResponseAndFeedback, markRespondingDone } from '../../../firebase/db';
 import { LikertButtons } from '../../../components/LikertButtons';
-import { MultipleChoiceButtons } from '../../../components/MultipleChoiceButtons';
-import { NumberAnswerInput } from '../../../components/NumberAnswerInput';
+import { EssayAnswerInput } from '../../../components/EssayAnswerInput';
+import { ShortAnswerInput } from '../../../components/ShortAnswerInput';
 import { BottomActionBar } from '../../../components/BottomActionBar';
 import { Card } from '../../../components/Card';
 import { getApplicableProblemTypes } from '../../../lib/problemTypes';
-import { LIKERT_LABELS } from '../../../lib/likertScale';
+import { formatLikertResponse } from '../../../lib/likertScale';
 import type { ProblemType, QuestionId, Team } from '../../../types';
 
 const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
@@ -34,7 +34,7 @@ export function RespondingStep({
   const [saving, setSaving] = useState(false);
 
   const qid = QIDS[qIndex];
-  const question = targetTeam.questions?.[qid];
+  const question = targetTeam?.questions?.[qid];
   const questionText = question?.text ?? '';
   const scaleType = question?.scaleType ?? 'LIKERT_5';
 
@@ -54,7 +54,7 @@ export function RespondingStep({
   }
 
   async function handleFeedbackSubmit() {
-    if (value === null) return;
+    if (value === null || String(value).trim() === '') return;
     setSaving(true);
     try {
       await submitResponseAndFeedback(sessionId, teamId, targetTeamId, qid, value, {
@@ -73,17 +73,24 @@ export function RespondingStep({
   }
 
   function respondedSummary(): string {
-    if (value === null) return '';
-    if (scaleType === 'LIKERT_5') return `${value}. ${LIKERT_LABELS[value as 1 | 2 | 3 | 4 | 5]}`;
-    if (scaleType === 'NUMBER') return `${value}${question?.unit ? ` ${question.unit}` : ''}`;
-    return String(value);
+    if (value === null || String(value).trim() === '') return '';
+    if (scaleType === 'LIKERT_5') {
+      return formatLikertResponse(value, question?.likertLabels);
+    }
+    if (scaleType === 'SHORT_ANSWER') {
+      return `${value}${question?.unit ? ` (${question.unit})` : ''}`;
+    }
+    const str = String(value);
+    return str.length > 35 ? `"${str.slice(0, 35)}..."` : `"${str}"`;
   }
+
+  const isAnswerValid = value !== null && String(value).trim().length > 0;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="border-b border-slate-100 bg-white px-10 py-3 text-sm text-slate-500">
-        {progressIndex + 1}/{progressTotal}번째 조의 질문에 응답하고 있습니다 · {targetTeam.teamNumber}조 · {targetTeam.nickname}
-        {targetTeam.topic && <span className="ml-2 text-slate-400">({targetTeam.topic})</span>}
+        {progressIndex + 1}/{progressTotal}번째 조의 질문에 응답하고 있습니다 · {targetTeam?.teamNumber}조 · {targetTeam?.nickname}
+        {targetTeam?.topic && <span className="ml-2 text-slate-400">({targetTeam.topic})</span>}
       </div>
 
       <div className="flex-1 overflow-y-auto px-10 py-6">
@@ -95,18 +102,22 @@ export function RespondingStep({
             </div>
             <div className="flex flex-col justify-center">
               {scaleType === 'LIKERT_5' && (
-                <LikertButtons value={typeof value === 'number' ? value : null} onChange={setValue} />
+                <LikertButtons
+                  value={value}
+                  onChange={setValue}
+                  customLabels={question?.likertLabels}
+                  hasOtherOption={question?.hasOtherOption}
+                />
               )}
-              {scaleType === 'MULTIPLE_CHOICE' && (
-                <MultipleChoiceButtons
-                  options={question?.options ?? []}
-                  value={typeof value === 'string' ? value : null}
+              {scaleType === 'ESSAY' && (
+                <EssayAnswerInput
+                  value={typeof value === 'string' ? value : ''}
                   onChange={setValue}
                 />
               )}
-              {scaleType === 'NUMBER' && (
-                <NumberAnswerInput
-                  value={typeof value === 'number' ? value : null}
+              {(scaleType === 'SHORT_ANSWER' || (scaleType as string) === 'NUMBER' || (scaleType as string) === 'MULTIPLE_CHOICE') && (
+                <ShortAnswerInput
+                  value={value}
                   onChange={setValue}
                   unit={question?.unit}
                 />
@@ -118,7 +129,7 @@ export function RespondingStep({
             <div className="flex flex-col justify-center">
               <p className="text-sm font-semibold text-blue-600">Q{qIndex + 1}에 답하면서 불편했던 점이 있었나요?</p>
               <p className="mt-3 text-2xl font-medium leading-relaxed text-slate-900">{questionText}</p>
-              <p className="mt-4 text-sm text-slate-400">방금 응답: {respondedSummary()}</p>
+              <p className="mt-4 text-sm font-medium text-slate-500">방금 응답: <span className="text-blue-700">{respondedSummary()}</span></p>
             </div>
             <div className="flex flex-col justify-center">
               <div className="flex flex-wrap gap-2">
@@ -155,7 +166,7 @@ export function RespondingStep({
 
       <BottomActionBar
         onClick={() => (stage === 'ANSWER' ? setStage('FEEDBACK') : handleFeedbackSubmit())}
-        disabled={stage === 'ANSWER' ? value === null : saving}
+        disabled={stage === 'ANSWER' ? !isAnswerValid : saving}
       >
         {stage === 'ANSWER'
           ? '다음'

@@ -25,3 +25,4 @@ promo/
 *.njsproj
 *.sln
 *.sw?
+.vercel

@@ -1,16 +1,15 @@
 import { shuffle } from './pokemonNames';
 import type { Assignments } from '../types';
 
-export const MIN_TEAMS_FOR_ASSIGNMENT = 4;
-const REVIEWERS_PER_TEAM = 3;
+export const MIN_TEAMS_FOR_ASSIGNMENT = 2;
+const MAX_REVIEWERS_PER_TEAM = 3;
 
 /**
- * N개 조가 있을 때 각 조가 정확히 다른 3개 조에 응답하고,
- * 각 조의 질문지가 정확히 3개 조로부터 응답받도록 배정한다.
+ * N개 조가 있을 때 각 조가 다른 조(최대 3개, N-1개 이하)에 응답하고,
+ * 각 조의 질문지가 동일한 수의 조로부터 응답받도록 배정한다.
  *
- * 셔플된 순서에 원형(circulant) 오프셋 1,2,3을 적용하면 N>=4일 때
- * out-degree=3, in-degree=3, self-loop 없음이 항상 보장되면서
- * 매 세션 배정 결과는 랜덤하게 달라진다.
+ * 셔플된 순서에 원형(circulant) 오프셋을 적용하여
+ * out-degree=k, in-degree=k, 자기 자신 제외(self-loop 없음)가 보장된다.
  */
 export function assignReviewers(teamIds: string[]): Assignments {
   const n = teamIds.length;
@@ -22,10 +21,11 @@ export function assignReviewers(teamIds: string[]): Assignments {
 
   const order = shuffle(teamIds);
   const assignments: Assignments = {};
+  const reviewersPerTeam = Math.min(MAX_REVIEWERS_PER_TEAM, n - 1);
 
   for (let i = 0; i < n; i++) {
     const targets: string[] = [];
-    for (let offset = 1; offset <= REVIEWERS_PER_TEAM; offset++) {
+    for (let offset = 1; offset <= reviewersPerTeam; offset++) {
       targets.push(order[(i + offset) % n]);
     }
     assignments[order[i]] = targets;

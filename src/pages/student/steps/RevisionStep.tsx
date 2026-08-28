@@ -5,7 +5,8 @@ import { BottomActionBar } from '../../../components/BottomActionBar';
 import { getFeedbackForQuestion, summarizeProblemTypes } from '../../../lib/feedbackUtils';
 import { getProblemTypeInfo } from '../../../lib/problemTypes';
 import { REVISION_REASONS } from '../../../lib/revisionReasons';
-import { SCALE_TYPES, MIN_CHOICE_OPTIONS, MAX_CHOICE_OPTIONS } from '../../../lib/scaleTypes';
+import { DEFAULT_LIKERT_LABELS } from '../../../lib/likertScale';
+import { SCALE_TYPES } from '../../../lib/scaleTypes';
 import type { QuestionId, RevisionReason, ScaleType, Team } from '../../../types';
 
 const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
@@ -13,17 +14,22 @@ const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
 interface RevisionDraft {
   text: string;
   scaleType: ScaleType;
-  options: string[];
+  isCustomLikert: boolean;
+  likertLabels: string[];
+  hasOtherOption: boolean;
   unit: string;
   reasons: RevisionReason[];
 }
 
 function draftFromQuestion(team: Team, qid: QuestionId): RevisionDraft {
   const q = team.questions?.[qid];
+  const hasCustomLabels = Boolean(q?.likertLabels && q.likertLabels.length === 5);
   return {
     text: q?.text ?? '',
     scaleType: q?.scaleType ?? 'LIKERT_5',
-    options: q?.options && q.options.length >= MIN_CHOICE_OPTIONS ? q.options : ['', ''],
+    isCustomLikert: hasCustomLabels,
+    likertLabels: hasCustomLabels && q?.likertLabels ? [...q.likertLabels] : [...DEFAULT_LIKERT_LABELS],
+    hasOtherOption: Boolean(q?.hasOtherOption),
     unit: q?.unit ?? '',
     reasons: [],
   };
@@ -31,8 +37,8 @@ function draftFromQuestion(team: Team, qid: QuestionId): RevisionDraft {
 
 function isDraftValid(d: RevisionDraft): boolean {
   if (!d.text.trim()) return false;
-  if (d.scaleType === 'MULTIPLE_CHOICE') {
-    return d.options.map((o) => o.trim()).filter(Boolean).length >= MIN_CHOICE_OPTIONS;
+  if (d.scaleType === 'LIKERT_5' && d.isCustomLikert) {
+    return d.likertLabels.every((l) => l.trim().length > 0);
   }
   return true;
 }
@@ -59,25 +65,11 @@ export function RevisionStep({
     setDrafts((prev) => ({ ...prev, [qid]: { ...prev[qid], ...patch } }));
   }
 
-  function updateOption(qid: QuestionId, index: number, text: string) {
+  function updateLikertLabel(qid: QuestionId, index: number, val: string) {
     setDrafts((prev) => {
-      const options = [...prev[qid].options];
-      options[index] = text;
-      return { ...prev, [qid]: { ...prev[qid], options } };
-    });
-  }
-
-  function addOption(qid: QuestionId) {
-    setDrafts((prev) => {
-      if (prev[qid].options.length >= MAX_CHOICE_OPTIONS) return prev;
-      return { ...prev, [qid]: { ...prev[qid], options: [...prev[qid].options, ''] } };
-    });
-  }
-
-  function removeOption(qid: QuestionId, index: number) {
-    setDrafts((prev) => {
-      if (prev[qid].options.length <= MIN_CHOICE_OPTIONS) return prev;
-      return { ...prev, [qid]: { ...prev[qid], options: prev[qid].options.filter((_, i) => i !== index) } };
+      const labels = [...prev[qid].likertLabels];
+      labels[index] = val;
+      return { ...prev, [qid]: { ...prev[qid], likertLabels: labels } };
     });
   }
 
@@ -111,11 +103,12 @@ export function RevisionStep({
                 revisedText: d.text.trim(),
                 revisionReasons: d.reasons,
                 scaleType: d.scaleType,
-                options:
-                  d.scaleType === 'MULTIPLE_CHOICE'
-                    ? d.options.map((o) => o.trim()).filter(Boolean)
+                likertLabels:
+                  d.scaleType === 'LIKERT_5' && d.isCustomLikert
+                    ? d.likertLabels.map((l) => l.trim())
                     : undefined,
-                unit: d.scaleType === 'NUMBER' && d.unit.trim() ? d.unit.trim() : undefined,
+                hasOtherOption: d.scaleType === 'LIKERT_5' ? d.hasOtherOption : undefined,
+                unit: d.scaleType === 'SHORT_ANSWER' && d.unit.trim() ? d.unit.trim() : undefined,
               },
             ];
           }),
@@ -165,7 +158,7 @@ export function RevisionStep({
                   <textarea
                     value={d.text}
                     onChange={(e) => updateDraft(qid, { text: e.target.value })}
-                    rows={4}
+                    rows={3}
                     className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-base outline-none focus:border-blue-500"
                   />
                   {unchanged && (
@@ -191,47 +184,69 @@ export function RevisionStep({
                     })}
                   </div>
 
-                  {d.scaleType === 'MULTIPLE_CHOICE' && (
-                    <div className="mt-2 space-y-1.5">
-                      {d.options.map((opt, i) => (
-                        <div key={i} className="flex items-center gap-1.5">
-                          <input
-                            value={opt}
-                            onChange={(e) => updateOption(qid, i, e.target.value)}
-                            placeholder={`선택지 ${i + 1}`}
-                            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                          />
-                          {d.options.length > MIN_CHOICE_OPTIONS && (
-                            <button
-                              type="button"
-                              onClick={() => removeOption(qid, i)}
-                              className="shrink-0 text-slate-400 hover:text-rose-500"
-                              aria-label="선택지 삭제"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      {d.options.length < MAX_CHOICE_OPTIONS && (
+                  {d.scaleType === 'LIKERT_5' && (
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-600">5점 척도 선택지</span>
                         <button
                           type="button"
-                          onClick={() => addOption(qid)}
-                          className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                          onClick={() => updateDraft(qid, { isCustomLikert: !d.isCustomLikert })}
+                          className="text-xs font-medium text-blue-600 underline hover:text-blue-800"
                         >
-                          + 선택지 추가
+                          {d.isCustomLikert ? '기본 척도로 변경' : '✏️ 척도 직접 수정'}
                         </button>
+                      </div>
+
+                      {d.isCustomLikert ? (
+                        <div className="mt-2 space-y-1.5">
+                          {d.likertLabels.map((lbl, i) => (
+                            <div key={i} className="flex items-center gap-1.5">
+                              <span className="w-4 shrink-0 text-center text-xs font-bold text-slate-400">
+                                {i + 1}
+                              </span>
+                              <input
+                                value={lbl}
+                                onChange={(e) => updateLikertLabel(qid, i, e.target.value)}
+                                placeholder={DEFAULT_LIKERT_LABELS[i]}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {DEFAULT_LIKERT_LABELS.map((lbl, i) => (
+                            <span key={i} className="rounded bg-white px-1.5 py-0.5 text-[11px] text-slate-600 border border-slate-200">
+                              {i + 1}. {lbl}
+                            </span>
+                          ))}
+                        </div>
                       )}
+
+                      <div className="mt-3 border-t border-slate-200/80 pt-2">
+                        <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={d.hasOtherOption}
+                            onChange={(e) => updateDraft(qid, { hasOtherOption: e.target.checked })}
+                            className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span>'기타' (직접 입력) 선택지 추가</span>
+                        </label>
+                      </div>
                     </div>
                   )}
 
-                  {d.scaleType === 'NUMBER' && (
-                    <input
-                      value={d.unit}
-                      onChange={(e) => updateDraft(qid, { unit: e.target.value })}
-                      placeholder="단위 (선택, 예: 권)"
-                      className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                    />
+                  {d.scaleType === 'SHORT_ANSWER' && (
+                    <div className="mt-3 space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-500">단위 힌트 (선택)</label>
+                      <input
+                        value={d.unit}
+                        onChange={(e) => updateDraft(qid, { unit: e.target.value })}
+                        placeholder="예: 권, 시간, 명, 회 등"
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                      />
+                    </div>
                   )}
 
                   <p className="mt-4 text-sm font-medium text-slate-600">무엇을 수정했나요?</p>

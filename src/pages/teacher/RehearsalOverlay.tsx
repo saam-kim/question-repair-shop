@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { useAnonAuth } from '../../hooks/useAnonAuth';
 import { useSession } from '../../hooks/useSession';
 import {
@@ -16,7 +16,12 @@ import {
 } from '../../firebase/db';
 import { previewStorage } from '../../lib/storage';
 import { assignReviewers, MIN_TEAMS_FOR_ASSIGNMENT } from '../../lib/assignmentAlgorithm';
-import { SAMPLE_TOPICS, SAMPLE_QUESTIONS, sampleResponseValue } from '../../lib/rehearsalSampleData';
+import {
+  SAMPLE_TOPICS,
+  SAMPLE_QUESTION_SPECS,
+  sampleResponseValue,
+  sampleFeedbackForQuestion,
+} from '../../lib/rehearsalSampleData';
 import { PreviewPane } from './PreviewPane';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { PhaseIndicator } from '../../components/PhaseIndicator';
@@ -119,7 +124,19 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
                 sessionId,
                 teamId,
                 Object.fromEntries(
-                  QUESTION_IDS.map((qid) => [qid, { text: SAMPLE_QUESTIONS[qid], scaleType: 'LIKERT_5' as const }]),
+                  QUESTION_IDS.map((qid) => {
+                    const spec = SAMPLE_QUESTION_SPECS[qid];
+                    return [
+                      qid,
+                      {
+                        text: spec.text,
+                        scaleType: spec.scaleType,
+                        likertLabels: spec.likertLabels,
+                        hasOtherOption: spec.hasOtherOption,
+                        unit: spec.unit,
+                      },
+                    ];
+                  }),
                 ) as Record<QuestionId, QuestionInput>,
               );
             })(),
@@ -135,16 +152,21 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
             if (team.respondingProgress?.[targetId] === 'DONE') return;
             const targetTeam = teams[targetId];
             if (!targetTeam) return;
+
+            // targetId 조의 입장에서 내가 몇 번째 리뷰어인지 판별
+            const allReviewersForTarget = Object.entries(assignments)
+              .filter(([, tList]) => tList.includes(targetId))
+              .map(([reviewerId]) => reviewerId);
+            const reviewerIndex = Math.max(0, allReviewersForTarget.indexOf(teamId));
+
             jobs.push(
               (async () => {
                 for (const qid of QUESTION_IDS) {
                   const q = targetTeam.questions?.[qid];
                   if (!q) continue;
-                  const value = sampleResponseValue(q.scaleType, q.options);
-                  await submitResponseAndFeedback(sessionId, teamId, targetId, qid, value, {
-                    problemTypes: ['NONE'],
-                    comment: '',
-                  });
+                  const value = sampleResponseValue(q.scaleType, q.likertLabels, q.unit);
+                  const feedback = sampleFeedbackForQuestion(qid, reviewerIndex);
+                  await submitResponseAndFeedback(sessionId, teamId, targetId, qid, value, feedback);
                 }
                 await markRespondingDone(sessionId, teamId, targetId);
               })(),
@@ -164,14 +186,29 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
                 Object.fromEntries(
                   QUESTION_IDS.map((qid) => {
                     const q = team.questions?.[qid];
+                    let revisedText = q?.text ?? '';
+                    let reasons: RevisionInput['revisionReasons'] = ['CLARITY'];
+
+                    if (qid === 'q1') {
+                      revisedText = q?.text ?? '';
+                      reasons = [];
+                    } else if (qid === 'q2') {
+                      revisedText = '나는 이 주제 관련 활동에 얼마나 자주 참여하나요?';
+                      reasons = ['SINGLE_TOPIC', 'CLARITY'];
+                    } else if (qid === 'q3') {
+                      revisedText = '최근 1주일 동안 이 활동에 참여한 총 시간(단위: 시간)을 적어주세요.';
+                      reasons = ['SPECIFICITY', 'EASIER_TO_ANSWER'];
+                    }
+
                     return [
                       qid,
                       {
                         originalText: q?.text ?? '',
-                        revisedText: `${q?.text ?? ''} (자동 수정)`,
-                        revisionReasons: ['CLARITY'],
+                        revisedText,
+                        revisionReasons: reasons,
                         scaleType: q?.scaleType ?? 'LIKERT_5',
-                        options: q?.options,
+                        likertLabels: q?.likertLabels,
+                        hasOtherOption: q?.hasOtherOption,
                         unit: q?.unit,
                       },
                     ];
