@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { ensureAnonAuth } from '../firebase/auth';
+import { ensureAnonAuth, getInitialUser } from '../firebase/auth';
 
 export function useAnonAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User>(() => getInitialUser());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,5 +20,5 @@ export function useAnonAuth() {
     };
   }, []);
 
-  return { uid: user?.uid ?? null, loading: !user && !error, error };
+  return { uid: user.uid, loading: false, error };
 }

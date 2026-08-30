@@ -12,7 +12,7 @@ export function StudentJoin() {
   const [code, setCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [checkingResume, setCheckingResume] = useState(true);
+  const [checkingResume, setCheckingResume] = useState(() => Boolean(studentStorage.read()));
   const [resumeInfo, setResumeInfo] = useState<{ sessionId: string } | null>(null);
 
   useEffect(() => {

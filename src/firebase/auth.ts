@@ -1,14 +1,14 @@
-import { getAuth, signInAnonymously, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
+﻿import { getAuth, signInAnonymously, type Auth, type User } from 'firebase/auth';
 import { app } from './config';
 
 let authInstance: Auth | null = null;
 
-function getAuthInstance(): Auth {
+export function getAuthInstance(): Auth {
   if (!authInstance) authInstance = getAuth(app);
   return authInstance;
 }
 
-function getFallbackUid(): string {
+export function getFallbackUid(): string {
   try {
     let uid = localStorage.getItem('qrs_client_uid');
     if (!uid) {
@@ -21,55 +21,41 @@ function getFallbackUid(): string {
   }
 }
 
+export function getInitialUser(): User {
+  try {
+    const auth = getAuthInstance();
+    if (auth.currentUser) return auth.currentUser;
+  } catch {
+    // ignore
+  }
+  return { uid: getFallbackUid(), isAnonymous: true } as unknown as User;
+}
+
 let anonAuthPromise: Promise<User> | null = null;
 
 /**
- * 학생/교사 모두 로그인 UI 없이 백그라운드에서 익명 인증을 받는다.
- * 학교 와이파이 방화벽이나 Auth 미설정 상태에서도 수업이 멈추지 않도록
- * 실패 시 로컬 영구 식별자(Fallback UID)로 즉시 전환한다.
+ * 학생/교사 모두 로그인 UI 없이 0ms 즉시 실행.
+ * 로컬 영구 식별자(Fallback UID)로 즉시 화면을 렌더링하고,
+ * 백그라운드에서 비동기 인증을 처리하여 로딩 지연을 완전히 제거한다.
  */
 export function ensureAnonAuth(): Promise<User> {
   if (anonAuthPromise) return anonAuthPromise;
 
+  const initial = getInitialUser();
   anonAuthPromise = new Promise<User>((resolve) => {
+    // 1. 즉시 초기 사용자 객체 반환 (0ms 로딩)
+    resolve(initial);
+
+    // 2. 백그라운드에서 Firebase Auth 연결 (UI 블로킹 방지)
     try {
       const auth = getAuthInstance();
-      if (auth.currentUser) {
-        return resolve(auth.currentUser);
+      if (!auth.currentUser) {
+        signInAnonymously(auth).catch(() => {
+          // 익명 인증 실패 시에도 로컬 UID로 100% 정상 작동
+        });
       }
-
-      let timeoutId: ReturnType<typeof setTimeout>;
-
-      const unsubscribe = onAuthStateChanged(
-        auth,
-        (user) => {
-          if (user) {
-            clearTimeout(timeoutId);
-            unsubscribe();
-            resolve(user);
-          }
-        },
-        () => {
-          // 리스너 에러 시 폴백
-          clearTimeout(timeoutId);
-          unsubscribe();
-          resolve({ uid: getFallbackUid(), isAnonymous: true } as unknown as User);
-        },
-      );
-
-      // 4초 내에 응답 없거나 에러 시 폴백 전환
-      timeoutId = setTimeout(() => {
-        unsubscribe();
-        resolve({ uid: getFallbackUid(), isAnonymous: true } as unknown as User);
-      }, 4000);
-
-      signInAnonymously(auth).catch(() => {
-        clearTimeout(timeoutId);
-        unsubscribe();
-        resolve({ uid: getFallbackUid(), isAnonymous: true } as unknown as User);
-      });
     } catch {
-      resolve({ uid: getFallbackUid(), isAnonymous: true } as unknown as User);
+      // ignore
     }
   });
 

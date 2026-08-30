@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAnonAuth } from '../../hooks/useAnonAuth';
 import { useSession } from '../../hooks/useSession';
@@ -16,7 +16,10 @@ import {
 } from '../../firebase/db';
 import { TeacherResults } from './TeacherResults';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import { RehearsalOverlay } from './RehearsalOverlay';
+
+const RehearsalOverlay = lazy(() =>
+  import('./RehearsalOverlay').then((m) => ({ default: m.RehearsalOverlay })),
+);
 
 export function TeacherDashboard() {
   const { sessionId = '' } = useParams();
@@ -272,7 +275,9 @@ export function TeacherDashboard() {
       </main>
 
       {showPreview && session.status !== 'ENDED' && (
-        <RehearsalOverlay sessionId={sessionId} onClose={() => setShowPreview(false)} />
+        <Suspense fallback={<LoadingScreen />}>
+          <RehearsalOverlay sessionId={sessionId} onClose={() => setShowPreview(false)} />
+        </Suspense>
       )}
     </div>
   );

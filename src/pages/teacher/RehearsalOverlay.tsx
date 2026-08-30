@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAnonAuth } from '../../hooks/useAnonAuth';
 import { useSession } from '../../hooks/useSession';
 import {
@@ -42,20 +42,36 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
     if (!uid || !data || startedRef.current) return;
     startedRef.current = true;
     (async () => {
+      // 1. 기존 슬롯 정보 중 중복되지 않고 유효한 것만 우선 매핑
+      const assignedTeamIds = new Set<string>();
+      const existingSlotMap: Record<number, string> = {};
+
       for (const slot of SLOTS) {
         const stored = previewStorage.read(sessionId, slot);
-        if (stored && data.teams[stored.teamId]) {
-          setSlotTeamIds((prev) => ({ ...prev, [slot]: stored.teamId }));
-          continue;
-        }
-        try {
-          const { teamId } = await joinOrCreateTeam(sessionId, uid);
-          previewStorage.write(sessionId, slot, teamId);
-          setSlotTeamIds((prev) => ({ ...prev, [slot]: teamId }));
-        } catch {
-          // 실패한 슬롯은 비워두고 다음으로 — 탭의 "이 조 리셋"으로 다시 시도 가능
+        if (stored && data.teams[stored.teamId] && !assignedTeamIds.has(stored.teamId)) {
+          assignedTeamIds.add(stored.teamId);
+          existingSlotMap[slot] = stored.teamId;
         }
       }
+
+      setSlotTeamIds(existingSlotMap);
+
+      // 2. 비어있거나 중복되어 새로 생성해야 하는 슬롯을 슬롯별 고유 식별자로 병렬 생성
+      const missingSlots = SLOTS.filter((slot) => !existingSlotMap[slot]);
+      if (missingSlots.length === 0) return;
+
+      await Promise.all(
+        missingSlots.map(async (slot) => {
+          try {
+            const slotUid = `${uid}_preview_slot_${slot}`;
+            const { teamId } = await joinOrCreateTeam(sessionId, slotUid);
+            previewStorage.write(sessionId, slot, teamId);
+            setSlotTeamIds((prev) => ({ ...prev, [slot]: teamId }));
+          } catch {
+            // 실패 시 해당 슬롯 비워둠 (재시도 가능)
+          }
+        }),
+      );
     })();
   }, [uid, data, sessionId]);
 
@@ -67,7 +83,8 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
       return next;
     });
     if (!uid) return;
-    const { teamId } = await joinOrCreateTeam(sessionId, uid);
+    const slotUid = `${uid}_preview_slot_${slot}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const { teamId } = await joinOrCreateTeam(sessionId, slotUid);
     previewStorage.write(sessionId, slot, teamId);
     setSlotTeamIds((prev) => ({ ...prev, [slot]: teamId }));
   }
@@ -249,14 +266,16 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#f3f6fc]">
-      <header className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-8 py-4">
-        <div className="flex items-center gap-4">
-          <p className="flex items-center gap-2 text-lg font-black tracking-tight text-slate-900">
+      <header className="flex shrink-0 items-center justify-between gap-6 border-b border-slate-100 bg-white px-8 py-3.5">
+        <div className="flex min-w-0 flex-1 items-center gap-6">
+          <p className="shrink-0 flex items-center gap-2 text-lg font-black tracking-tight text-slate-900">
             🧪 리허설 모드
           </p>
-          <PhaseIndicator currentPhase={session.currentPhase} />
+          <div className="hidden min-w-[480px] max-w-2xl flex-1 md:block">
+            <PhaseIndicator currentPhase={session.currentPhase} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {showAutoFill && (
             <button
               type="button"
@@ -298,7 +317,7 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
               className={`rounded-full border-2 px-4 py-2 text-sm font-semibold transition-colors
                 ${activeSlot === slot ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600 hover:border-blue-300'}`}
             >
-              {team ? `${team.teamNumber}조 · ${team.nickname}` : '준비 중…'}
+              {team ? `${team.teamNumber}조 · ${team.nickname}` : `${slot}조 준비 중…`}
             </button>
           );
         })}

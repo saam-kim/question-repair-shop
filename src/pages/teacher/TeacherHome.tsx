@@ -11,7 +11,7 @@ export function TeacherHome() {
   const { uid, loading: authLoading, error: authError } = useAnonAuth();
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [checkingResume, setCheckingResume] = useState(true);
+  const [checkingResume, setCheckingResume] = useState(() => Boolean(teacherStorage.read()));
   const [resumeInfo, setResumeInfo] = useState<{ sessionId: string; sessionCode: string } | null>(null);
 
   useEffect(() => {
