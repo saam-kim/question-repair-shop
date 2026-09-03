@@ -50,24 +50,24 @@ export function TeacherHome() {
   if (checkingResume && !authError) return <LoadingScreen />;
 
   return (
-    <div className="bg-hero-gradient flex min-h-screen flex-col items-center justify-center gap-8 px-6 py-10">
+    <div className="bg-hero-gradient flex min-h-screen flex-col items-center justify-center gap-12 px-10 py-12">
       <div className="text-center">
-        <span className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-medium text-blue-700">
+        <span className="rounded-full border border-blue-200 bg-blue-50 px-5 py-2 text-base font-medium text-blue-700">
           교사용 대시보드
         </span>
-        <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
+        <h1 className="mt-5 text-5xl font-black tracking-tight text-slate-900">
           🔧 질문<span className="text-blue-600">수리소</span>
         </h1>
-        <p className="mt-2 text-slate-500">사회와 문화 · 질문지법 체험 활동</p>
-        <p className="mt-4 text-slate-500">
+        <p className="mt-3 text-lg text-slate-500">사회와 문화 · 질문지법 체험 활동</p>
+        <p className="mt-5 text-xl leading-8 text-slate-500">
           내가 만든 질문, 다른 사람이 답해보면 어떨까요?
           <br />
           응답과 피드백을 거쳐 더 좋은 질문으로 수리해봅니다.
         </p>
       </div>
 
-      <div className="w-full max-w-md rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-[0_8px_30px_-8px_rgba(30,64,175,0.15)]">
-        <p className="text-slate-500">새 수업을 만들거나 기존 수업에 입장하세요.</p>
+      <div className="w-full max-w-2xl rounded-3xl border border-slate-100 bg-white p-12 text-center shadow-[0_8px_30px_-8px_rgba(30,64,175,0.15)]">
+        <p className="text-xl text-slate-500">새 수업을 만들거나 기존 수업에 입장하세요.</p>
 
         {(error || authError) && <p className="mt-3 text-sm text-rose-600">{error || authError}</p>}
 
@@ -75,7 +75,7 @@ export function TeacherHome() {
           type="button"
           onClick={handleCreate}
           disabled={authLoading || creating || !uid}
-          className="mt-6 w-full rounded-2xl bg-blue-600 py-3.5 text-lg font-semibold text-white shadow-[0_4px_14px_-2px_rgba(37,99,235,0.4)] transition-colors
+          className="mt-8 w-full rounded-2xl bg-blue-600 py-5 text-xl font-semibold text-white shadow-[0_4px_14px_-2px_rgba(37,99,235,0.4)] transition-colors
             hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
           {creating ? '만드는 중...' : '🚀 새로운 수업 만들기'}
@@ -85,10 +85,10 @@ export function TeacherHome() {
           <button
             type="button"
             onClick={() => navigate(`/teacher/${resumeInfo.sessionId}`)}
-            className="mt-3 w-full rounded-2xl border border-blue-200 bg-blue-50 py-3.5 text-lg font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+            className="mt-4 w-full rounded-2xl border border-blue-200 bg-blue-50 py-5 text-xl font-semibold text-blue-700 transition-colors hover:bg-blue-100"
           >
             기존 수업 입장
-            <span className="ml-2 text-sm font-medium tracking-wider text-blue-500">{resumeInfo.sessionCode}</span>
+            <span className="ml-2 text-base font-medium tracking-wider text-blue-500">{resumeInfo.sessionCode}</span>
           </button>
         )}
       </div>
