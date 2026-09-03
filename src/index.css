@@ -10,8 +10,10 @@ html, body, #root {
 
 body {
   margin: 0;
-  font-family: "Pretendard", -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
+    Roboto, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   -webkit-tap-highlight-color: transparent;
 }
 
