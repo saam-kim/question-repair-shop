@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAnonAuth } from '../../hooks/useAnonAuth';
 import { useSession } from '../../hooks/useSession';
 import { teacherStorage } from '../../lib/storage';
@@ -16,6 +16,7 @@ import {
 } from '../../firebase/db';
 import { TeacherResults } from './TeacherResults';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { StudentJoinShareDialog } from '../../components/StudentJoinShareDialog';
 
 const RehearsalOverlay = lazy(() =>
   import('./RehearsalOverlay').then((m) => ({ default: m.RehearsalOverlay })),
@@ -24,11 +25,15 @@ const RehearsalOverlay = lazy(() =>
 export function TeacherDashboard() {
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { uid } = useAnonAuth();
   const { data, loading } = useSession(uid ? sessionId : null);
   const [busy, setBusy] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showStudentJoinInfo, setShowStudentJoinInfo] = useState(
+    () => Boolean((location.state as { showStudentJoinInfo?: boolean } | null)?.showStudentJoinInfo),
+  );
 
   useEffect(() => {
     if (data) teacherStorage.write({ sessionId });
@@ -55,6 +60,8 @@ export function TeacherDashboard() {
   }
 
   const { session, teams, assignments = {} } = data;
+  const studentUrl = new URL(window.location.href);
+  studentUrl.hash = `/student/${sessionId}`;
   const teamEntries = Object.entries(teams);
   const submittedTeamIds = teamEntries.filter(([, t]) => t.questionsSubmittedAt).map(([id]) => id);
   const notSubmittedTeams = teamEntries.filter(([, t]) => !t.questionsSubmittedAt);
@@ -137,6 +144,13 @@ export function TeacherDashboard() {
             </div>
             {session.status !== 'ENDED' && (
               <>
+                <button
+                  type="button"
+                  onClick={() => setShowStudentJoinInfo(true)}
+                  className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                >
+                  📱 학생 QR
+                </button>
                 <div className="h-8 w-px bg-slate-150" style={{ backgroundColor: '#e7ebf3' }} />
                 <button
                   type="button"
@@ -278,6 +292,13 @@ export function TeacherDashboard() {
         <Suspense fallback={<LoadingScreen />}>
           <RehearsalOverlay sessionId={sessionId} onClose={() => setShowPreview(false)} />
         </Suspense>
+      )}
+      {showStudentJoinInfo && session.status !== 'ENDED' && (
+        <StudentJoinShareDialog
+          studentUrl={studentUrl.toString()}
+          sessionCode={session.sessionCode}
+          onClose={() => setShowStudentJoinInfo(false)}
+        />
       )}
     </div>
   );

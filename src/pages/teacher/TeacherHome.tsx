@@ -39,7 +39,7 @@ export function TeacherHome() {
     try {
       const { sessionId } = await createSession(uid);
       teacherStorage.write({ sessionId });
-      navigate(`/teacher/${sessionId}`);
+      navigate(`/teacher/${sessionId}`, { state: { showStudentJoinInfo: true } });
     } catch (e) {
       setError(e instanceof Error ? e.message : '수업 생성에 실패했습니다.');
     } finally {
