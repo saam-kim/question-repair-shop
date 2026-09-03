@@ -67,7 +67,7 @@ export function TeacherHome() {
       </div>
 
       <div className="w-full max-w-md rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-[0_8px_30px_-8px_rgba(30,64,175,0.15)]">
-        <p className="text-slate-500">새 수업을 만들거나 진행 중인 수업으로 바로 들어가세요.</p>
+        <p className="text-slate-500">새 수업을 만들거나 기존 수업에 입장하세요.</p>
 
         {(error || authError) && <p className="mt-3 text-sm text-rose-600">{error || authError}</p>}
 
