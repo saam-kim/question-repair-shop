@@ -49,38 +49,6 @@ export function TeacherHome() {
 
   if (checkingResume && !authError) return <LoadingScreen />;
 
-  if (resumeInfo) {
-    return (
-      <div className="bg-hero-gradient flex min-h-screen flex-col items-center justify-center gap-8 px-6 py-10 text-center">
-        <div className="w-full max-w-md rounded-3xl border border-slate-100 bg-white p-10 shadow-[0_8px_30px_-8px_rgba(30,64,175,0.15)]">
-          <div className="text-4xl" aria-hidden>🔧</div>
-          <h1 className="mt-3 text-xl font-bold text-slate-900">진행 중인 수업이 있습니다</h1>
-          <p className="mt-1 text-slate-500">
-            수업 코드 <span className="font-semibold text-blue-700">{resumeInfo.sessionCode}</span> 수업이 아직
-            종료되지 않았습니다.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate(`/teacher/${resumeInfo.sessionId}`)}
-            className="mt-6 w-full rounded-2xl bg-blue-600 py-3.5 text-lg font-semibold text-white shadow-[0_4px_14px_-2px_rgba(37,99,235,0.4)] hover:bg-blue-700"
-          >
-            이어서 진행하기
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              teacherStorage.clear();
-              setResumeInfo(null);
-            }}
-            className="mt-4 text-sm text-slate-400 underline"
-          >
-            새 수업 만들기
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-hero-gradient flex min-h-screen flex-col items-center justify-center gap-8 px-6 py-10">
       <div className="text-center">
@@ -94,7 +62,7 @@ export function TeacherHome() {
       </div>
 
       <div className="w-full max-w-md rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-[0_8px_30px_-8px_rgba(30,64,175,0.15)]">
-        <p className="text-slate-500">버튼 하나로 새 수업을 시작하고, 학생들에게 알려줄 6자리 코드를 받으세요.</p>
+        <p className="text-slate-500">새 수업을 만들거나 진행 중인 수업으로 바로 들어가세요.</p>
 
         {(error || authError) && <p className="mt-3 text-sm text-rose-600">{error || authError}</p>}
 
@@ -105,8 +73,19 @@ export function TeacherHome() {
           className="mt-6 w-full rounded-2xl bg-blue-600 py-3.5 text-lg font-semibold text-white shadow-[0_4px_14px_-2px_rgba(37,99,235,0.4)] transition-colors
             hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
-          {creating ? '만드는 중...' : '🚀 새 수업 만들기'}
+          {creating ? '만드는 중...' : '🚀 새로운 수업 만들기'}
         </button>
+
+        {resumeInfo && (
+          <button
+            type="button"
+            onClick={() => navigate(`/teacher/${resumeInfo.sessionId}`)}
+            className="mt-3 w-full rounded-2xl border border-blue-200 bg-blue-50 py-3.5 text-lg font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+          >
+            기존 수업 입장
+            <span className="ml-2 text-sm font-medium tracking-wider text-blue-500">{resumeInfo.sessionCode}</span>
+          </button>
+        )}
       </div>
     </div>
   );
