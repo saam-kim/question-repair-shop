@@ -59,6 +59,11 @@ export function TeacherHome() {
           🔧 질문<span className="text-blue-600">수리소</span>
         </h1>
         <p className="mt-2 text-slate-500">사회와 문화 · 질문지법 체험 활동</p>
+        <p className="mt-4 text-slate-500">
+          내가 만든 질문, 다른 사람이 답해보면 어떨까요?
+          <br />
+          응답과 피드백을 거쳐 더 좋은 질문으로 수리해봅니다.
+        </p>
       </div>
 
       <div className="w-full max-w-md rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-[0_8px_30px_-8px_rgba(30,64,175,0.15)]">
