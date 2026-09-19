@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { useLocalDraft } from '../../../hooks/useLocalDraft';
+import { Notice } from '../../../components/Notice';
 import { setTeamTopic } from '../../../firebase/db';
 import { Card } from '../../../components/Card';
 import { BottomActionBar } from '../../../components/BottomActionBar';
@@ -13,14 +15,20 @@ const EXAMPLES = [
 ];
 
 export function TopicStep({ sessionId, teamId }: { sessionId: string; teamId: string }) {
-  const [topic, setTopic] = useState('');
+  const topicInputId = useId();
+  const [topic, setTopic, clearDraft] = useLocalDraft(`${sessionId}_${teamId}_topic`, () => '');
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit() {
     if (!topic.trim()) return;
+    setError(null);
     setSaving(true);
     try {
       await setTeamTopic(sessionId, teamId, topic.trim());
+      clearDraft();
+    } catch {
+      setError('주제를 저장하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.');
     } finally {
       setSaving(false);
     }
@@ -28,10 +36,10 @@ export function TopicStep({ sessionId, teamId }: { sessionId: string; teamId: st
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-10 py-6">
+      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-5 sm:px-8 py-6">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-2">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">우리 조의 조사</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">무엇이 궁금한가요?</h1>
             <p className="mt-1 text-slate-500">조사 주제를 정해보세요.</p>
 
             <Card className="mt-5 p-5">
@@ -56,13 +64,22 @@ export function TopicStep({ sessionId, teamId }: { sessionId: string; teamId: st
           </div>
 
           <Card className="flex flex-col justify-center p-6">
-            <label className="block text-sm font-medium text-slate-700">조사 주제</label>
+            <label htmlFor={topicInputId} className="block text-sm font-medium text-slate-700">
+              조사 주제
+            </label>
             <input
+              maxLength={500}
+              id={topicInputId}
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="예: 학생들의 학교생활 만족도"
               className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-4 text-xl outline-none focus:border-blue-500"
             />
+            {error && (
+              <div className="mt-4">
+                <Notice>{error}</Notice>
+              </div>
+            )}
           </Card>
         </div>
       </div>

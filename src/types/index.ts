@@ -20,6 +20,7 @@ export const PHASE_ORDER: SessionPhase[] = [
 ];
 
 export interface Session {
+  schemaVersion?: number;
   sessionCode: string;
   status: SessionStatus;
   currentPhase: SessionPhase;
@@ -33,7 +34,7 @@ export interface Session {
 export type QuestionId = 'q1' | 'q2' | 'q3';
 export const QUESTION_IDS: QuestionId[] = ['q1', 'q2', 'q3'];
 
-export type ScaleType = 'LIKERT_5' | 'ESSAY' | 'SHORT_ANSWER';
+export type ScaleType = 'LIKERT_5' | 'YES_NO' | 'ESSAY' | 'SHORT_ANSWER';
 
 export interface QuestionItem {
   text: string;
@@ -51,7 +52,7 @@ export interface QuestionItem {
 }
 
 export interface ResponseEntry {
-  /** LIKERT_5는 숫자(1~5) 또는 "기타: [내용]", ESSAY/SHORT_ANSWER는 문자열 */
+  /** LIKERT_5는 숫자(1~5) 또는 "기타: [내용]", YES_NO는 "예"/"아니요", ESSAY/SHORT_ANSWER는 문자열 */
   value: number | string;
   respondedAt: number;
 }

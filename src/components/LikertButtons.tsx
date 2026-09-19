@@ -54,14 +54,14 @@ export function LikertButtons({
             type="button"
             disabled={disabled}
             onClick={() => onChange(v)}
-            className={`flex items-center gap-4 rounded-2xl border-2 px-6 py-4 text-left text-xl font-medium transition-all
+            className={`flex items-center gap-4 rounded-2xl border px-6 py-4 text-left text-xl font-medium transition-all
               ${selected
-                ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-[0_4px_14px_-4px_rgba(37,99,235,0.35)]'
+                ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-sm'
                 : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'}
               disabled:opacity-50`}
           >
             <span
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-base font-semibold
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-base font-semibold
                 ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 text-slate-500'}`}
             >
               {v}
@@ -73,9 +73,9 @@ export function LikertButtons({
 
       {hasOtherOption && (
         <div
-          className={`flex flex-col gap-2 rounded-2xl border-2 p-4 transition-all
+          className={`flex flex-col gap-2 rounded-2xl border p-4 transition-all
             ${isOther
-              ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-[0_4px_14px_-4px_rgba(37,99,235,0.35)]'
+              ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-sm'
               : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'}`}
         >
           <button
@@ -85,7 +85,7 @@ export function LikertButtons({
             className="flex items-center gap-4 text-left text-xl font-medium disabled:opacity-50"
           >
             <span
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-base font-semibold
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-base font-semibold
                 ${isOther ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 text-slate-500'}`}
             >
               +

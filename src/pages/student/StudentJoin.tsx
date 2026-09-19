@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getDoc } from 'firebase/firestore';
 import { useAnonAuth } from '../../hooks/useAnonAuth';
 import { sessionDocRef, findSessionByCode, joinOrCreateTeam } from '../../firebase/db';
 import { studentStorage } from '../../lib/storage';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { Brand } from '../../components/Brand';
+import { Icon } from '../../components/Icon';
+import { Notice } from '../../components/Notice';
 
 export function StudentJoin() {
   const navigate = useNavigate();
@@ -22,14 +25,16 @@ export function StudentJoin() {
       setCheckingResume(false);
       return;
     }
-    getDoc(sessionDocRef(stored.sessionId)).then((snap) => {
-      if (snap.exists() && snap.data().status !== 'ENDED') {
-        setResumeInfo({ sessionId: stored.sessionId });
-      } else {
-        studentStorage.clear();
-      }
-      setCheckingResume(false);
-    });
+    getDoc(sessionDocRef(stored.sessionId))
+      .then((snap) => {
+        if (snap.exists() && snap.data().schemaVersion === 2 && snap.data().status !== 'ENDED') {
+          setResumeInfo({ sessionId: stored.sessionId });
+        } else {
+          studentStorage.clear();
+        }
+      })
+      .catch(() => setError('이전 수업을 확인하지 못했습니다. 코드를 입력해 다시 입장해주세요.'))
+      .finally(() => setCheckingResume(false));
   }, [uid]);
 
   async function handleJoin() {
@@ -64,70 +69,83 @@ export function StudentJoin() {
 
   if (checkingResume && !authError) return <LoadingScreen />;
 
-  if (resumeInfo) {
-    return (
-      <div className="bg-hero-gradient flex min-h-screen flex-col items-center justify-center gap-6 px-6 py-10 text-center">
-        <div className="w-full max-w-md rounded-3xl border border-slate-100 bg-white p-10 shadow-[0_8px_30px_-8px_rgba(30,64,175,0.15)]">
-          <div className="text-4xl" aria-hidden>🔧</div>
-          <h1 className="mt-3 text-xl font-bold text-slate-900">이전에 참여하던 활동을 찾았습니다</h1>
-          <p className="mt-1 text-slate-500">이어서 진행할까요?</p>
-          <button
-            type="button"
-            onClick={() => navigate(`/student/${resumeInfo.sessionId}`)}
-            className="mt-6 w-full rounded-2xl bg-blue-600 py-3.5 text-lg font-semibold text-white shadow-[0_4px_14px_-2px_rgba(37,99,235,0.4)] hover:bg-blue-700"
-          >
-            이어서 하기
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              studentStorage.clear();
-              setResumeInfo(null);
-            }}
-            className="mt-4 text-sm text-slate-400 underline"
-          >
-            다른 코드로 입장하기
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-hero-gradient flex min-h-screen flex-col items-center justify-center gap-8 px-6 py-10">
-      <div className="text-center">
-        <span className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-medium text-blue-700">
-          학생 접속
-        </span>
-        <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
-          🔧 질문<span className="text-blue-600">수리소</span>
+    <div className="landing">
+      <header className="landing-nav">
+        <Brand />
+        <Link to="/" className="text-sm text-slate-500 hover:text-blue-700">
+          교사 화면으로
+        </Link>
+      </header>
+      <main className="mx-auto flex w-full max-w-lg flex-col px-5 pb-12 pt-10 sm:pt-16">
+        <p className="eyebrow">STUDENT WORKSPACE</p>
+        <h1 className="mt-3 text-3xl font-semibold text-slate-900">
+          {resumeInfo ? '다시 만나서 반가워요.' : '우리 조의 질문, 시작해볼까요?'}
         </h1>
-        <p className="mt-2 text-slate-500">선생님이 알려준 6자리 수업 코드를 입력하세요</p>
-      </div>
-
-      <div className="w-full max-w-sm rounded-3xl border border-slate-100 bg-white p-8 shadow-[0_8px_30px_-8px_rgba(30,64,175,0.15)]">
-        <label className="block text-sm font-semibold text-slate-700">수업 코드</label>
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          inputMode="numeric"
-          maxLength={6}
-          placeholder="000000"
-          className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-center text-3xl tracking-[0.3em] outline-none focus:border-blue-500 focus:bg-white"
-        />
-
-        {(error || authError) && <p className="mt-3 text-sm text-rose-600">{error || authError}</p>}
-
-        <button
-          type="button"
-          onClick={handleJoin}
-          disabled={authLoading || joining || !uid}
-          className="mt-6 w-full rounded-2xl bg-blue-600 py-3.5 text-lg font-semibold text-white shadow-[0_4px_14px_-2px_rgba(37,99,235,0.4)] transition-colors
-            hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+        <p className="mt-3 text-sm leading-7 text-slate-500">
+          {resumeInfo
+            ? '이전에 참여하던 수업을 찾았습니다. 이어서 활동할 수 있어요.'
+            : '선생님이 알려준 6자리 수업 코드를 입력해주세요.'}
+        </p>
+        <form
+          className="surface mt-7 p-6 sm:p-8"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (resumeInfo) navigate('/student/' + resumeInfo.sessionId);
+            else void handleJoin();
+          }}
         >
-          {joining ? '입장하는 중...' : '🚀 입장하기'}
-        </button>
-      </div>
+          {!resumeInfo && (
+            <>
+              <label htmlFor="class-code" className="block text-sm font-semibold text-slate-700">
+                수업 코드
+              </label>
+              <input
+                id="class-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="off"
+                pattern="[0-9]{6}"
+                placeholder="000000"
+                className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-5 text-center font-mono text-3xl tracking-[0.25em] outline-none focus:border-blue-500 focus:bg-white"
+              />
+              <p className="mt-3 text-xs leading-6 text-slate-500">
+                한 조에서는 대표 기기 한 대로 접속하세요.
+                <br />조 이름은 입장할 때 자동으로 정해집니다.
+              </p>
+            </>
+          )}
+          {(error || authError) && (
+            <div className="mt-4">
+              <Notice>{error || authError}</Notice>
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={authLoading || joining || !uid || (!resumeInfo && code.length !== 6)}
+            className="btn-primary mt-6 w-full"
+          >
+            {joining ? '수업에 입장하고 있습니다' : resumeInfo ? '이어서 하기' : '수업 입장하기'}
+            <Icon name="arrow" />
+          </button>
+          {resumeInfo && (
+            <button
+              type="button"
+              onClick={() => {
+                studentStorage.clear();
+                setResumeInfo(null);
+              }}
+              className="mt-5 w-full text-sm text-slate-500 underline underline-offset-4"
+            >
+              다른 코드로 입장하기
+            </button>
+          )}
+        </form>
+        <p className="mt-6 text-center text-xs text-slate-500">
+          서로의 질문에 답하고, 더 좋은 질문을 함께 만들어보세요.
+        </p>
+      </main>
     </div>
   );
 }

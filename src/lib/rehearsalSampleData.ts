@@ -37,6 +37,7 @@ export function sampleResponseValue(
   unit?: string,
 ): number | string {
   if (scaleType === 'LIKERT_5') return 4;
+  if (scaleType === 'YES_NO') return '예';
   if (scaleType === 'ESSAY') {
     return '평소에 관심이 많아 자주 찾아보고 있으며, 활동을 통해 많은 것을 배우고 있습니다.';
   }

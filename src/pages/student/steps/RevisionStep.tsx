@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useLocalDraft } from '../../../hooks/useLocalDraft';
+import { Notice } from '../../../components/Notice';
 import { submitRevisions, type RevisionInput } from '../../../firebase/db';
 import { Card } from '../../../components/Card';
 import { BottomActionBar } from '../../../components/BottomActionBar';
@@ -28,7 +30,8 @@ function draftFromQuestion(team: Team, qid: QuestionId): RevisionDraft {
     text: q?.text ?? '',
     scaleType: q?.scaleType ?? 'LIKERT_5',
     isCustomLikert: hasCustomLabels,
-    likertLabels: hasCustomLabels && q?.likertLabels ? [...q.likertLabels] : [...DEFAULT_LIKERT_LABELS],
+    likertLabels:
+      hasCustomLabels && q?.likertLabels ? [...q.likertLabels] : [...DEFAULT_LIKERT_LABELS],
     hasOtherOption: Boolean(q?.hasOtherOption),
     unit: q?.unit ?? '',
     reasons: [],
@@ -54,12 +57,16 @@ export function RevisionStep({
   myTeam: Team;
   allTeams: Record<string, Team>;
 }) {
-  const [drafts, setDrafts] = useState<Record<QuestionId, RevisionDraft>>({
-    q1: draftFromQuestion(myTeam, 'q1'),
-    q2: draftFromQuestion(myTeam, 'q2'),
-    q3: draftFromQuestion(myTeam, 'q3'),
-  });
+  const [drafts, setDrafts, clearDraft] = useLocalDraft<Record<QuestionId, RevisionDraft>>(
+    `${sessionId}_${teamId}_revision`,
+    () => ({
+      q1: draftFromQuestion(myTeam, 'q1'),
+      q2: draftFromQuestion(myTeam, 'q2'),
+      q3: draftFromQuestion(myTeam, 'q3'),
+    }),
+  );
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function updateDraft(qid: QuestionId, patch: Partial<RevisionDraft>) {
     setDrafts((prev) => ({ ...prev, [qid]: { ...prev[qid], ...patch } }));
@@ -88,6 +95,7 @@ export function RevisionStep({
   const allFilled = QIDS.every((qid) => isDraftValid(drafts[qid]));
 
   async function handleSubmit() {
+    setError(null);
     setSubmitting(true);
     try {
       await submitRevisions(
@@ -114,6 +122,11 @@ export function RevisionStep({
           }),
         ) as Record<QuestionId, RevisionInput>,
       );
+      clearDraft();
+    } catch {
+      setError(
+        '제출하지 못했습니다. 작성 내용은 유지되니 인터넷 연결을 확인하고 다시 제출해주세요.',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -121,12 +134,17 @@ export function RevisionStep({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-10 py-6">
+      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6">
         <div className="mx-auto max-w-6xl">
-          <h1 className="text-2xl font-bold text-slate-900">🔧 질문 수리하기</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">질문 수리하기</h1>
           <p className="mt-1 text-slate-500">받은 피드백을 참고해 질문을 다듬어보세요.</p>
 
-          <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3">
+          {error && (
+            <div className="mt-4">
+              <Notice>{error}</Notice>
+            </div>
+          )}
+          <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
             {QIDS.map((qid, idx) => {
               const d = drafts[qid];
               const original = myTeam.questions?.[qid]?.text ?? '';
@@ -135,7 +153,9 @@ export function RevisionStep({
               return (
                 <Card key={qid} className="flex flex-col p-5">
                   <p className="text-sm font-semibold text-blue-600">Q{idx + 1} · 수리 전</p>
-                  <p className="mt-1 text-sm text-slate-500 line-through decoration-slate-300">{original}</p>
+                  <p className="mt-1 text-sm text-slate-500 line-through decoration-slate-300">
+                    {original}
+                  </p>
 
                   {issues.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1.5">
@@ -144,9 +164,10 @@ export function RevisionStep({
                         return (
                           <span
                             key={type}
-                            className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600"
+                            className="max-w-full break-keep rounded-2xl bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600"
                           >
-                            {info.severity === 'REQUIRED' ? '🔴' : '🟡'} {info.requiredRuleLabel ?? info.label}
+                            <span className="status-dot mr-1" aria-hidden="true" />{' '}
+                            {info.requiredRuleLabel ?? info.label}
                             {count > 1 ? ` ×${count}` : ''}
                           </span>
                         );
@@ -156,13 +177,16 @@ export function RevisionStep({
 
                   <label className="mt-4 block text-sm font-semibold text-slate-700">수리 후</label>
                   <textarea
+                    maxLength={2000}
                     value={d.text}
                     onChange={(e) => updateDraft(qid, { text: e.target.value })}
                     rows={3}
                     className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-base outline-none focus:border-blue-500"
                   />
                   {unchanged && (
-                    <p className="mt-1.5 text-xs text-amber-600">아직 원래 질문과 같아요. 정말 수정이 필요 없는지 한 번 더 확인해보세요.</p>
+                    <p className="mt-1.5 text-xs text-amber-600">
+                      아직 원래 질문과 같아요. 정말 수정이 필요 없는지 한 번 더 확인해보세요.
+                    </p>
                   )}
 
                   <p className="mt-4 text-xs font-semibold text-slate-500">응답 방식</p>
@@ -175,7 +199,8 @@ export function RevisionStep({
                           type="button"
                           onClick={() => updateDraft(qid, { scaleType: st.id })}
                           title={st.description}
-                          className={`rounded-full border-2 px-3 py-1.5 text-xs font-medium transition-colors
+                          aria-pressed={selected}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors
                             ${selected ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600 hover:border-blue-300'}`}
                         >
                           {st.label}
@@ -187,13 +212,15 @@ export function RevisionStep({
                   {d.scaleType === 'LIKERT_5' && (
                     <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-600">5점 척도 선택지</span>
+                        <span className="text-xs font-semibold text-slate-600">
+                          5점 척도 선택지
+                        </span>
                         <button
                           type="button"
                           onClick={() => updateDraft(qid, { isCustomLikert: !d.isCustomLikert })}
                           className="text-xs font-medium text-blue-600 underline hover:text-blue-800"
                         >
-                          {d.isCustomLikert ? '기본 척도로 변경' : '✏️ 척도 직접 수정'}
+                          {d.isCustomLikert ? '기본 척도로 변경' : '척도 직접 수정'}
                         </button>
                       </div>
 
@@ -205,6 +232,7 @@ export function RevisionStep({
                                 {i + 1}
                               </span>
                               <input
+                                maxLength={160}
                                 value={lbl}
                                 onChange={(e) => updateLikertLabel(qid, i, e.target.value)}
                                 placeholder={DEFAULT_LIKERT_LABELS[i]}
@@ -216,7 +244,10 @@ export function RevisionStep({
                       ) : (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {DEFAULT_LIKERT_LABELS.map((lbl, i) => (
-                            <span key={i} className="rounded bg-white px-1.5 py-0.5 text-[11px] text-slate-600 border border-slate-200">
+                            <span
+                              key={i}
+                              className="rounded bg-white px-1.5 py-0.5 text-[11px] text-slate-600 border border-slate-200"
+                            >
                               {i + 1}. {lbl}
                             </span>
                           ))}
@@ -237,10 +268,20 @@ export function RevisionStep({
                     </div>
                   )}
 
+                  {d.scaleType === 'YES_NO' && (
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                      선택지: 예 / 아니요
+                      <p className="mt-1 text-slate-500">응답자가 두 선택지 중 하나를 고릅니다.</p>
+                    </div>
+                  )}
+
                   {d.scaleType === 'SHORT_ANSWER' && (
                     <div className="mt-3 space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-500">단위 힌트 (선택)</label>
+                      <label className="text-xs font-semibold text-slate-500">
+                        단위 힌트 (선택)
+                      </label>
                       <input
+                        maxLength={40}
                         value={d.unit}
                         onChange={(e) => updateDraft(qid, { unit: e.target.value })}
                         placeholder="예: 권, 시간, 명, 회 등"
@@ -258,7 +299,7 @@ export function RevisionStep({
                           key={r.id}
                           type="button"
                           onClick={() => toggleReason(qid, r.id)}
-                          className={`rounded-full border-2 px-3 py-1.5 text-xs font-medium transition-colors
+                          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors
                             ${selected ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600 hover:border-blue-300'}`}
                         >
                           {r.label}

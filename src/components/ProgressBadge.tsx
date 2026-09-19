@@ -1,7 +1,7 @@
 export type ProgressState = 'DONE' | 'IN_PROGRESS' | 'WAITING';
 
 const CONFIG: Record<ProgressState, { label: string; icon: string; className: string }> = {
-  DONE: { label: '완료', icon: '✓', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  DONE: { label: '완료', icon: '✓', className: 'bg-blue-50 text-blue-700 border-blue-200' },
   IN_PROGRESS: { label: '진행', icon: '●', className: 'bg-amber-50 text-amber-700 border-amber-200' },
   WAITING: { label: '대기', icon: '–', className: 'bg-slate-50 text-slate-500 border-slate-200' },
 };

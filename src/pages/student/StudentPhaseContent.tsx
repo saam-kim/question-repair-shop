@@ -54,7 +54,12 @@ export function StudentPhaseContent({
     case 'RESPONDING': {
       const targets = assignments[teamId] ?? [];
       if (targets.length === 0) {
-        return <WaitingScreen title="응답할 조를 배정하고 있습니다" description="잠시만 기다려주세요." />;
+        return (
+          <WaitingScreen
+            title="이번 응답 배정에 포함되지 않았어요"
+            description="질문지 제출 여부를 선생님께 확인해주세요."
+          />
+        );
       }
       const nextTarget = targets.find((t) => myTeam.respondingProgress?.[t] !== 'DONE');
       if (!nextTarget) {
@@ -72,6 +77,7 @@ export function StudentPhaseContent({
           teamId={teamId}
           targetTeamId={nextTarget}
           targetTeam={allTeams[nextTarget]}
+          myTeam={myTeam}
           progressIndex={targets.indexOf(nextTarget)}
           progressTotal={targets.length}
         />
@@ -98,7 +104,12 @@ export function StudentPhaseContent({
       return <DoneStep myTeam={myTeam} teamId={teamId} allTeams={allTeams} />;
 
     case 'ENDED':
-      return <WaitingScreen title="활동이 종료되었습니다" description="오늘 활동에 참여해주셔서 고맙습니다." />;
+      return (
+        <WaitingScreen
+          title="활동이 종료되었습니다"
+          description="오늘 활동에 참여해주셔서 고맙습니다."
+        />
+      );
 
     default:
       return null;

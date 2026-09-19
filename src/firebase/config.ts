@@ -12,3 +12,5 @@ const firebaseConfig = {
 export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
 export const app = initializeApp(firebaseConfig);
+
+export const useEmulators = import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS === 'true';

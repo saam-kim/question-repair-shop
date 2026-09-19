@@ -24,14 +24,14 @@ export function PreviewPane({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_2px_10px_-2px_rgba(30,64,175,0.06)] ${fill ? 'h-full' : 'h-[640px]'}`}
+      className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm ${fill ? 'h-full' : 'h-[640px]'}`}
     >
       <div className="flex h-full flex-col">
         {session.status === 'PAUSED' && <PausedOverlay />}
         <div className="flex items-center justify-between border-b border-amber-100 bg-amber-50 px-4 py-1.5 text-xs font-medium text-amber-700">
-          <span>🧪 미리보기 · 실제 데이터로 이 세션에 참여 중인 조입니다</span>
+          <span>학생 화면 미리보기 · 연습용 조</span>
           <button type="button" onClick={onReset} className="underline hover:text-amber-900">
-            이 조 리셋
+            리허설 처음부터
           </button>
         </div>
         <StudentTopBar

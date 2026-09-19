@@ -1,8 +1,129 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+    function signedIn() { return request.auth != null; }
+    function session(sid) { return get(/databases/$(database)/documents/qrsSessions/$(sid)).data; }
+    function current(sid) { return session(sid).get('schemaVersion', 0) == 2; }
+    function teacher(sid) { return signedIn() && current(sid) && session(sid).teacherUid == request.auth.uid; }
+    function member(sid) {
+      return signedIn() && current(sid) && exists(/databases/$(database)/documents/qrsSessions/$(sid)/teams/$(request.auth.uid));
+    }
+    function joinableData(s) {
+      return s.get('schemaVersion', 0) == 2 && s.status in ['LOBBY', 'ACTIVE'] && s.currentPhase in ['LOBBY', 'QUESTION'] && s.teamCounter < 40;
+    }
+    function joinable(sid) { return joinableData(session(sid)); }
+    function text(value, maximum) { return value is string && value.size() <= maximum; }
+    function format(q) {
+      let labels = q.get('likertLabels', ['', '', '', '', '']);
+      return labels is list && labels.size() == 5
+        && text(labels[0], 160) && text(labels[1], 160) && text(labels[2], 160)
+        && text(labels[3], 160) && text(labels[4], 160)
+        && q.get('hasOtherOption', false) is bool && text(q.get('unit', ''), 40)
+        && !('options' in q);
+    }
+    function question(q) {
+      return q.keys().hasOnly(['text', 'scaleType', 'order', 'createdAt', 'likertLabels', 'hasOtherOption', 'unit', 'options'])
+        && text(q.text, 2000) && q.text.size() > 0
+        && q.scaleType in ['YES_NO', 'LIKERT_5', 'ESSAY', 'SHORT_ANSWER']
+        && q.order is int && q.order >= 1 && q.order <= 3 && q.createdAt is number && format(q);
+    }
+    function questions(q) {
+      return q.keys().hasAll(['q1', 'q2', 'q3']) && q.keys().hasOnly(['q1', 'q2', 'q3'])
+        && question(q.q1) && question(q.q2) && question(q.q3);
+    }
+    function revision(r) {
+      return r.keys().hasOnly(['originalText', 'revisedText', 'revisionReasons', 'scaleType', 'createdAt', 'likertLabels', 'hasOtherOption', 'unit', 'options'])
+        && text(r.originalText, 2000) && text(r.revisedText, 2000) && r.revisedText.size() > 0
+        && r.scaleType in ['YES_NO', 'LIKERT_5', 'ESSAY', 'SHORT_ANSWER']
+        && r.createdAt is number && format(r) && r.revisionReasons is list && r.revisionReasons.hasOnly(['CLARITY', 'SINGLE_TOPIC', 'REMOVE_LEADING', 'SPECIFICITY', 'EASIER_TO_ANSWER', 'OTHER']);
+    }
+    function feedback(f) {
+      return f.keys().hasOnly(['problemTypes', 'comment', 'createdAt']) && text(f.comment, 2000)
+        && f.createdAt is number && f.problemTypes is list
+        && f.problemTypes.hasOnly(['NONE', 'UNCLEAR', 'DOUBLE_BARRELED', 'OVERLAPPING_OPTIONS', 'LEADING', 'ANSWERING_DIFFICULT', 'OTHER']);
+    }
+    function answer(a, q) {
+      return a.keys().hasOnly(['value', 'respondedAt']) && a.respondedAt is number
+        && ((q.scaleType == 'YES_NO' && a.value in ['예', '아니요'])
+        || (q.scaleType == 'LIKERT_5' && ((a.value is int && a.value >= 1 && a.value <= 5)
+          || (q.get('hasOtherOption', false) == true && text(a.value, 6000) && a.value.matches('기타: .*'))))
+        || (q.scaleType in ['ESSAY', 'SHORT_ANSWER'] && text(a.value, 6000) && a.value.size() > 0));
+    }
+    function pair(a, f, q, key) {
+      return (!(key in a) && !(key in f)) || (key in a && key in f && answer(a[key], q[key]) && feedback(f[key]));
+    }
+    function targetAnswers(sid, target, data) {
+      let a = data.get('responsesGiven', {}).get(target, {});
+      let f = data.get('feedbackGiven', {}).get(target, {});
+      let q = get(/databases/$(database)/documents/qrsSessions/$(sid)/teams/$(target)).data.questions;
+      let done = data.get('respondingProgress', {}).get(target, 'PENDING');
+      return a.keys().hasOnly(['q1', 'q2', 'q3']) && f.keys().hasOnly(['q1', 'q2', 'q3'])
+        && pair(a, f, q, 'q1') && pair(a, f, q, 'q2') && pair(a, f, q, 'q3')
+        && (done == 'PENDING' || (done == 'DONE' && a.keys().hasAll(['q1', 'q2', 'q3'])));
+    }
+    function validResponses(sid, tid, data, previous) {
+      let targets = session(sid).get('assignments', {}).get(tid, []);
+      let changed = data.get('responsesGiven', {}).diff(previous.get('responsesGiven', {})).affectedKeys()
+        .union(data.get('feedbackGiven', {}).diff(previous.get('feedbackGiven', {})).affectedKeys())
+        .union(data.get('respondingProgress', {}).diff(previous.get('respondingProgress', {})).affectedKeys());
+      // The app saves one target per write. Validate that target, preserving already validated work.
+      return changed.size() <= 1 && targets.size() > 0 && targets.size() <= 3
+        && data.get('responsesGiven', {}).keys().hasOnly(targets)
+        && data.get('feedbackGiven', {}).keys().hasOnly(targets)
+        && data.get('respondingProgress', {}).keys().hasOnly(targets)
+        && (!changed.hasAny([targets[0]]) || targetAnswers(sid, targets[0], data))
+        && (targets.size() < 2 || !changed.hasAny([targets[1]]) || targetAnswers(sid, targets[1], data))
+        && (targets.size() < 3 || !changed.hasAny([targets[2]]) || targetAnswers(sid, targets[2], data));
+    }
+    match /qrsSessions/{sid} {
+      // Knowing a code reveals only session metadata; never student work before membership.
+      allow get: if signedIn();
+      allow list: if signedIn() && resource.data.teacherUid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['schemaVersion', 'sessionCode', 'status', 'currentPhase', 'createdAt', 'teacherUid', 'teamCounter', 'pokemonPool'])
+        && request.resource.data.schemaVersion == 2 && request.resource.data.teacherUid == request.auth.uid
+        && request.resource.data.sessionCode.matches('[0-9]{6}') && sid == 's' + request.resource.data.sessionCode
+        && request.resource.data.status == 'LOBBY' && request.resource.data.currentPhase == 'LOBBY'
+        && request.resource.data.teamCounter == 0 && request.resource.data.createdAt is number
+        && request.resource.data.pokemonPool is list && request.resource.data.pokemonPool.size() == 40;
+      allow update: if (signedIn() && resource.data.get('schemaVersion', 0) == 2 && resource.data.teacherUid == request.auth.uid && resource.data.status != 'ENDED'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'currentPhase', 'assignments'])
+        && request.resource.data.status in ['LOBBY', 'ACTIVE', 'PAUSED', 'ENDED']
+        && request.resource.data.currentPhase in ['LOBBY', 'QUESTION', 'RESPONDING', 'FEEDBACK_REVIEW', 'REVISION', 'RESULT', 'ENDED'])
+        || (signedIn() && joinableData(resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teamCounter'])
+          && request.resource.data.teamCounter == resource.data.teamCounter + 1
+          && !exists(/databases/$(database)/documents/qrsSessions/$(sid)/teams/$(request.auth.uid))
+          && getAfter(/databases/$(database)/documents/qrsSessions/$(sid)/teams/$(request.auth.uid)).data.teamNumber == request.resource.data.teamCounter
+          && getAfter(/databases/$(database)/documents/qrsSessions/$(sid)/teams/$(request.auth.uid)).data.ownerUid == request.auth.uid);
+      allow delete: if teacher(sid) && resource.data.status == 'ENDED';
+
+      match /teams/{tid} {
+        allow get: if teacher(sid) || member(sid) || (signedIn() && tid == request.auth.uid && current(sid));
+        allow list: if teacher(sid) || member(sid);
+        allow create: if signedIn() && tid == request.auth.uid && joinable(sid)
+          && request.resource.data.keys().hasOnly(['ownerUid', 'teamNumber', 'nickname', 'createdAt'])
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.teamNumber == session(sid).teamCounter + 1
+          && getAfter(/databases/$(database)/documents/qrsSessions/$(sid)).data.teamCounter == request.resource.data.teamNumber
+          && text(request.resource.data.nickname, 80) && request.resource.data.createdAt is number;
+        allow update: if signedIn() && current(sid) && tid == request.auth.uid && resource.data.ownerUid == request.auth.uid
+          && session(sid).status == 'ACTIVE' && (
+            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt']) && request.resource.data.lastActiveAt is number)
+            || (session(sid).currentPhase == 'QUESTION' && !('questionsSubmittedAt' in resource.data)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['topic', 'questions', 'questionsSubmittedAt'])
+              && text(request.resource.data.get('topic', ''), 500)
+              && (!('questions' in request.resource.data) || (questions(request.resource.data.questions) && request.resource.data.questionsSubmittedAt is number)))
+            || (session(sid).currentPhase == 'RESPONDING'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['responsesGiven', 'feedbackGiven', 'respondingProgress'])
+              && validResponses(sid, tid, request.resource.data, resource.data))
+            || (session(sid).currentPhase == 'REVISION' && !('revisionsSubmittedAt' in resource.data)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revisions', 'revisionsSubmittedAt'])
+              && request.resource.data.revisions.keys().hasOnly(['q1', 'q2', 'q3'])
+              && revision(request.resource.data.revisions.q1) && revision(request.resource.data.revisions.q2) && revision(request.resource.data.revisions.q3)
+              && request.resource.data.revisionsSubmittedAt is number)
+          );
+        allow delete: if teacher(sid) && session(sid).status == 'ENDED';
+      }
     }
   }
 }

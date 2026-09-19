@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useLocalDraft } from '../../../hooks/useLocalDraft';
+import { Notice } from '../../../components/Notice';
 import { submitQuestions, setTeamTopic, type QuestionInput } from '../../../firebase/db';
 import { Card } from '../../../components/Card';
 import { BottomActionBar } from '../../../components/BottomActionBar';
-import { DEFAULT_LIKERT_LABELS, LIKERT_VALUES, getLikertLabels } from '../../../lib/likertScale';
+import { DEFAULT_LIKERT_LABELS, getLikertLabels } from '../../../lib/likertScale';
 import { SCALE_TYPES } from '../../../lib/scaleTypes';
 import type { QuestionId, ScaleType } from '../../../types';
 
@@ -45,13 +47,17 @@ export function QuestionsStep({
   teamId: string;
   topic: string;
 }) {
-  const [drafts, setDrafts] = useState<Record<QuestionId, QuestionDraft>>({
-    q1: emptyDraft(),
-    q2: emptyDraft(),
-    q3: emptyDraft(),
-  });
+  const [drafts, setDrafts, clearDraft] = useLocalDraft<Record<QuestionId, QuestionDraft>>(
+    `${sessionId}_${teamId}_questions_${topic}`,
+    () => ({
+      q1: emptyDraft(),
+      q2: emptyDraft(),
+      q3: emptyDraft(),
+    }),
+  );
   const [reviewing, setReviewing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const allFilled = QIDS.every((qid) => isDraftValid(drafts[qid]));
 
@@ -68,6 +74,7 @@ export function QuestionsStep({
   }
 
   async function handleFinalSubmit() {
+    setError(null);
     setSubmitting(true);
     try {
       await submitQuestions(
@@ -92,6 +99,11 @@ export function QuestionsStep({
           }),
         ) as Record<QuestionId, QuestionInput>,
       );
+      clearDraft();
+    } catch {
+      setError(
+        '제출하지 못했습니다. 작성 내용은 유지되니 인터넷 연결을 확인하고 다시 제출해주세요.',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -100,11 +112,16 @@ export function QuestionsStep({
   if (reviewing) {
     return (
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-10 py-8">
+        <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-8">
           <div className="mx-auto w-full max-w-3xl">
-            <h1 className="text-2xl font-bold text-slate-900">제출 전 확인해주세요</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">제출 전 확인해주세요</h1>
             <p className="mt-1 text-slate-500">제출하면 다른 조가 이 질문지에 응답하게 됩니다.</p>
 
+            {error && (
+              <div className="mt-4">
+                <Notice>{error}</Notice>
+              </div>
+            )}
             <Card className="mt-6 p-6">
               <p className="text-sm font-medium text-slate-500">조사 주제</p>
               <p className="mt-1 text-lg font-semibold text-slate-900">{topic}</p>
@@ -132,20 +149,24 @@ export function QuestionsStep({
                             </span>
                           ))}
                           {d.hasOtherOption && (
-                            <span className="rounded-md bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
+                            <span className="rounded-md bg-blue-50 px-2 py-1 font-semibold text-blue-700">
                               + 기타(직접 작성)
                             </span>
                           )}
                         </div>
                       )}
 
+                      {d.scaleType === 'YES_NO' && (
+                        <p className="mt-2 text-xs text-blue-700">선택지: 예 / 아니요</p>
+                      )}
+
                       {d.scaleType === 'ESSAY' && (
-                        <p className="mt-2 text-xs text-slate-500">✍️ 서술형 주관식 문항</p>
+                        <p className="mt-2 text-xs text-slate-500">서술형 주관식 문항</p>
                       )}
 
                       {d.scaleType === 'SHORT_ANSWER' && (
                         <p className="mt-2 text-xs text-slate-500">
-                          📝 단답형 주관식 {d.unit.trim() ? `(단위: ${d.unit.trim()})` : ''}
+                          단답형 주관식 {d.unit.trim() ? `(단위: ${d.unit.trim()})` : ''}
                         </p>
                       )}
                     </div>
@@ -177,38 +198,45 @@ export function QuestionsStep({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-10 py-6">
+      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6">
         <div className="mx-auto w-full max-w-6xl">
           <div className="flex items-start justify-between gap-6">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">질문 3개 만들기</h1>
+              <h1 className="text-2xl font-semibold text-slate-900">질문 3개 만들기</h1>
               <p className="mt-1 text-slate-500">
-                조사 주제 <span className="font-medium text-slate-700">"{topic}"</span>에 대한 질문을 만들어보세요.{' '}
+                조사 주제 <span className="font-medium text-slate-700">"{topic}"</span>에 대한
+                질문을 만들어보세요.{' '}
                 <button
                   type="button"
-                  onClick={() => setTeamTopic(sessionId, teamId, '')}
+                  onClick={() => {
+                    void setTeamTopic(sessionId, teamId, '').catch(() =>
+                      setError('주제를 변경하지 못했습니다. 다시 시도해주세요.'),
+                    );
+                  }}
                   className="text-blue-600 underline hover:text-blue-800"
                 >
                   주제 다시 정하기
                 </button>
               </p>
             </div>
-            <div className="hidden shrink-0 flex-wrap justify-end gap-1.5 pt-1 text-xs text-slate-500 md:flex">
-              {LIKERT_VALUES.map((v) => (
-                <span key={v} className="rounded-full bg-slate-100 px-2.5 py-1">
-                  {v}. {DEFAULT_LIKERT_LABELS[v - 1]}
-                </span>
-              ))}
-            </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3">
+          {error && (
+            <div className="mt-4">
+              <Notice>{error}</Notice>
+            </div>
+          )}
+          <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
             {QIDS.map((qid, idx) => {
               const d = drafts[qid];
               return (
                 <Card key={qid} className="flex flex-col p-5">
-                  <label className="text-sm font-semibold text-blue-600">Q{idx + 1}</label>
+                  <label htmlFor={qid} className="text-sm font-semibold text-blue-600">
+                    질문 {idx + 1}
+                  </label>
                   <textarea
+                    maxLength={2000}
+                    id={qid}
                     value={d.text}
                     onChange={(e) => updateDraft(qid, { text: e.target.value })}
                     placeholder="예: 나는 학교에서 이루어지는 수업에 전반적으로 만족한다."
@@ -226,7 +254,8 @@ export function QuestionsStep({
                           type="button"
                           onClick={() => updateDraft(qid, { scaleType: st.id })}
                           title={st.description}
-                          className={`rounded-full border-2 px-3 py-1.5 text-xs font-medium transition-colors
+                          aria-pressed={selected}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors
                             ${selected ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600 hover:border-blue-300'}`}
                         >
                           {st.label}
@@ -238,13 +267,15 @@ export function QuestionsStep({
                   {d.scaleType === 'LIKERT_5' && (
                     <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-600">5점 척도 선택지</span>
+                        <span className="text-xs font-semibold text-slate-600">
+                          5점 척도 선택지
+                        </span>
                         <button
                           type="button"
                           onClick={() => updateDraft(qid, { isCustomLikert: !d.isCustomLikert })}
                           className="text-xs font-medium text-blue-600 underline hover:text-blue-800"
                         >
-                          {d.isCustomLikert ? '기본 척도로 변경' : '✏️ 척도 직접 수정'}
+                          {d.isCustomLikert ? '기본 척도로 변경' : '척도 직접 수정'}
                         </button>
                       </div>
 
@@ -259,6 +290,7 @@ export function QuestionsStep({
                                 {i + 1}
                               </span>
                               <input
+                                maxLength={160}
                                 value={lbl}
                                 onChange={(e) => updateLikertLabel(qid, i, e.target.value)}
                                 placeholder={DEFAULT_LIKERT_LABELS[i]}
@@ -270,7 +302,10 @@ export function QuestionsStep({
                       ) : (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {DEFAULT_LIKERT_LABELS.map((lbl, i) => (
-                            <span key={i} className="rounded bg-white px-1.5 py-0.5 text-[11px] text-slate-600 border border-slate-200">
+                            <span
+                              key={i}
+                              className="rounded bg-white px-1.5 py-0.5 text-[11px] text-slate-600 border border-slate-200"
+                            >
                               {i + 1}. {lbl}
                             </span>
                           ))}
@@ -291,16 +326,26 @@ export function QuestionsStep({
                     </div>
                   )}
 
+                  {d.scaleType === 'YES_NO' && (
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                      선택지: 예 / 아니요
+                      <p className="mt-1 text-slate-500">응답자가 두 선택지 중 하나를 고릅니다.</p>
+                    </div>
+                  )}
+
                   {d.scaleType === 'ESSAY' && (
                     <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
-                      💡 응답자가 자유롭게 생각을 적을 수 있는 긴 서술형 주관식 입력란이 제공됩니다.
+                      응답자가 자유롭게 생각을 적을 수 있는 긴 서술형 주관식 입력란이 제공됩니다.
                     </div>
                   )}
 
                   {d.scaleType === 'SHORT_ANSWER' && (
                     <div className="mt-3 space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-500">단위 힌트 (선택)</label>
+                      <label className="text-xs font-semibold text-slate-500">
+                        단위 힌트 (선택)
+                      </label>
                       <input
+                        maxLength={40}
                         value={d.unit}
                         onChange={(e) => updateDraft(qid, { unit: e.target.value })}
                         placeholder="예: 권, 시간, 명, 회 등"

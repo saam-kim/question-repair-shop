@@ -13,6 +13,11 @@ export const SCALE_TYPES: ScaleTypeInfo[] = [
     description: '5단계 척도로 응답 (척도 문구 수정 및 기타 옵션 가능)',
   },
   {
+    id: 'YES_NO',
+    label: '예/아니요',
+    description: '예 또는 아니요 중 하나를 선택하여 응답',
+  },
+  {
     id: 'ESSAY',
     label: '서술형 주관식',
     description: '생각이나 이유를 긴 문장으로 자유롭게 작성',

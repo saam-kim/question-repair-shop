@@ -12,14 +12,13 @@ export function BottomActionBar({
   secondary?: ReactNode;
 }) {
   return (
-    <footer className="flex shrink-0 items-center justify-center gap-4 border-t border-slate-100 bg-white px-8 py-4">
+    <footer className="action-bar">
       {secondary}
       <button
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className="min-w-72 rounded-2xl bg-blue-600 px-8 py-4 text-xl font-semibold text-white shadow-[0_4px_14px_-2px_rgba(37,99,235,0.4)] transition-all
-          hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+        className="btn-primary w-full sm:w-auto sm:min-w-64"
       >
         {children}
       </button>

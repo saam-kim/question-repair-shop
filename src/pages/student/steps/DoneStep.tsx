@@ -1,3 +1,4 @@
+import { Icon } from '../../../components/Icon';
 import { Card } from '../../../components/Card';
 import { getFeedbackForQuestion, countProblemTypes } from '../../../lib/feedbackUtils';
 import { getProblemTypeInfo } from '../../../lib/problemTypes';
@@ -22,22 +23,28 @@ export function DoneStep({
       overallCounts[pt] = (overallCounts[pt] ?? 0) + (counts[pt] ?? 0);
     });
   });
-  const topProblem = (Object.entries(overallCounts) as [ProblemType, number][]).sort((a, b) => b[1] - a[1])[0];
+  const topProblem = (Object.entries(overallCounts) as [ProblemType, number][]).sort(
+    (a, b) => b[1] - a[1],
+  )[0];
 
   return (
-    <div className="flex-1 overflow-y-auto px-10 py-8">
+    <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-8">
       <div className="mx-auto max-w-3xl">
         <div className="text-center">
-          <div className="text-4xl" aria-hidden>🎉</div>
-          <h1 className="mt-2 text-2xl font-bold text-slate-900">질문 수리 완료!</h1>
-          <p className="mt-1 text-slate-500">우리가 만든 질문은 응답자에게 어떤 점이 어려웠을까요?</p>
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-blue-50 text-blue-700">
+            <Icon name="check" className="h-7 w-7" />
+          </div>
+          <h1 className="mt-2 text-2xl font-semibold text-slate-900">질문 수리 완료!</h1>
+          <p className="mt-1 text-slate-500">
+            우리가 만든 질문은 응답자에게 어떤 점이 어려웠을까요?
+          </p>
         </div>
 
         {topProblem && (
           <Card className="mt-6 p-5 text-center">
             <p className="text-sm font-medium text-slate-500">가장 많이 받은 피드백</p>
             <p className="mt-1 text-lg font-semibold text-rose-600">
-              🔴 {getProblemTypeInfo(topProblem[0]).label} ({topProblem[1]}회)
+              {getProblemTypeInfo(topProblem[0]).label} ({topProblem[1]}회)
             </p>
           </Card>
         )}
@@ -54,15 +61,18 @@ export function DoneStep({
                     {revision.originalText}
                   </p>
                   <p className="text-center text-slate-400">↓</p>
-                  <p className="rounded-lg bg-emerald-50 px-3 py-2 font-medium text-emerald-800">
+                  <p className="rounded-lg bg-blue-50 px-3 py-2 font-medium text-blue-800">
                     {revision.revisedText}
                   </p>
                 </div>
                 {revision.revisionReasons.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {revision.revisionReasons.map((r) => (
-                      <span key={r} className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-                        🟢 {REVISION_REASONS.find((rr) => rr.id === r)?.label}
+                      <span
+                        key={r}
+                        className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
+                      >
+                        {REVISION_REASONS.find((rr) => rr.id === r)?.label}
                       </span>
                     ))}
                   </div>

@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAnonAuth } from '../../hooks/useAnonAuth';
 import { useSession } from '../../hooks/useSession';
 import {
-  joinOrCreateTeam,
   setTeamTopic,
   submitQuestions,
   submitResponseAndFeedback,
@@ -14,7 +12,7 @@ import {
   type QuestionInput,
   type RevisionInput,
 } from '../../firebase/db';
-import { previewStorage } from '../../lib/storage';
+import { createRehearsal, closeRehearsal } from '../../lib/rehearsalStore';
 import { assignReviewers, MIN_TEAMS_FOR_ASSIGNMENT } from '../../lib/assignmentAlgorithm';
 import {
   SAMPLE_TOPICS,
@@ -30,72 +28,37 @@ import type { QuestionId, SessionPhase } from '../../types';
 
 const SLOTS = [1, 2, 3, 4];
 
-export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
-  const { uid } = useAnonAuth();
+export function RehearsalOverlay({ onClose }: { onClose: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    dialog?.showModal();
+    return () => dialog?.close();
+  }, []);
+  const [sessionId, setSessionId] = useState(createRehearsal);
   const { data } = useSession(sessionId);
   const [activeSlot, setActiveSlot] = useState(1);
-  const [slotTeamIds, setSlotTeamIds] = useState<Record<number, string>>({});
+  const slotTeamIds: Record<number, string> = { 1: 'team1', 2: 'team2', 3: 'team3', 4: 'team4' };
   const [busy, setBusy] = useState(false);
-  const startedRef = useRef(false);
-
-  useEffect(() => {
-    if (!uid || !data || startedRef.current) return;
-    startedRef.current = true;
-    (async () => {
-      // 1. 기존 슬롯 정보 중 중복되지 않고 유효한 것만 우선 매핑
-      const assignedTeamIds = new Set<string>();
-      const existingSlotMap: Record<number, string> = {};
-
-      for (const slot of SLOTS) {
-        const stored = previewStorage.read(sessionId, slot);
-        if (stored && data.teams[stored.teamId] && !assignedTeamIds.has(stored.teamId)) {
-          assignedTeamIds.add(stored.teamId);
-          existingSlotMap[slot] = stored.teamId;
-        }
-      }
-
-      setSlotTeamIds(existingSlotMap);
-
-      // 2. 비어있거나 중복되어 새로 생성해야 하는 슬롯을 슬롯별 고유 식별자로 병렬 생성
-      const missingSlots = SLOTS.filter((slot) => !existingSlotMap[slot]);
-      if (missingSlots.length === 0) return;
-
-      await Promise.all(
-        missingSlots.map(async (slot) => {
-          try {
-            const slotUid = `${uid}_preview_slot_${slot}`;
-            const { teamId } = await joinOrCreateTeam(sessionId, slotUid);
-            previewStorage.write(sessionId, slot, teamId);
-            setSlotTeamIds((prev) => ({ ...prev, [slot]: teamId }));
-          } catch {
-            // 실패 시 해당 슬롯 비워둠 (재시도 가능)
-          }
-        }),
-      );
-    })();
-  }, [uid, data, sessionId]);
-
-  async function handleResetSlot(slot: number) {
-    previewStorage.clear(sessionId, slot);
-    setSlotTeamIds((prev) => {
-      const next = { ...prev };
-      delete next[slot];
-      return next;
-    });
-    if (!uid) return;
-    const slotUid = `${uid}_preview_slot_${slot}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const { teamId } = await joinOrCreateTeam(sessionId, slotUid);
-    previewStorage.write(sessionId, slot, teamId);
-    setSlotTeamIds((prev) => ({ ...prev, [slot]: teamId }));
+  function handleReset() {
+    closeRehearsal(sessionId);
+    setSessionId(createRehearsal());
+    setActiveSlot(1);
+  }
+  function handleClose() {
+    closeRehearsal(sessionId);
+    onClose();
   }
 
-  if (!data) {
+  if (!data)
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#f3f6fc]">
+      <dialog
+        ref={dialogRef}
+        className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none bg-canvas"
+      >
         <LoadingScreen />
-      </div>
+      </dialog>
     );
-  }
 
   const { session, teams, assignments = {} } = data;
   const teamEntries = Object.entries(teams);
@@ -136,7 +99,8 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
           if (!teamId || !team || team.questionsSubmittedAt) return;
           jobs.push(
             (async () => {
-              if (!team.topic) await setTeamTopic(sessionId, teamId, SAMPLE_TOPICS[i % SAMPLE_TOPICS.length]);
+              if (!team.topic)
+                await setTeamTopic(sessionId, teamId, SAMPLE_TOPICS[i % SAMPLE_TOPICS.length]);
               await submitQuestions(
                 sessionId,
                 teamId,
@@ -183,7 +147,14 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
                   if (!q) continue;
                   const value = sampleResponseValue(q.scaleType, q.likertLabels, q.unit);
                   const feedback = sampleFeedbackForQuestion(qid, reviewerIndex);
-                  await submitResponseAndFeedback(sessionId, teamId, targetId, qid, value, feedback);
+                  await submitResponseAndFeedback(
+                    sessionId,
+                    teamId,
+                    targetId,
+                    qid,
+                    value,
+                    feedback,
+                  );
                 }
                 await markRespondingDone(sessionId, teamId, targetId);
               })(),
@@ -213,7 +184,8 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
                       revisedText = '나는 이 주제 관련 활동에 얼마나 자주 참여하나요?';
                       reasons = ['SINGLE_TOPIC', 'CLARITY'];
                     } else if (qid === 'q3') {
-                      revisedText = '최근 1주일 동안 이 활동에 참여한 총 시간(단위: 시간)을 적어주세요.';
+                      revisedText =
+                        '최근 1주일 동안 이 활동에 참여한 총 시간(단위: 시간)을 적어주세요.';
                       reasons = ['SPECIFICITY', 'EASIER_TO_ANSWER'];
                     }
 
@@ -265,17 +237,25 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#f3f6fc]">
-      <header className="flex shrink-0 items-center justify-between gap-6 border-b border-slate-100 bg-white px-8 py-3.5">
+    <dialog
+      ref={dialogRef}
+      aria-label="수업 리허설"
+      onCancel={(event) => {
+        event.preventDefault();
+        handleClose();
+      }}
+      className="fixed inset-0 z-50 m-0 flex h-dvh max-h-none w-screen max-w-none flex-col border-0 bg-canvas p-0"
+    >
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white px-8 py-3.5">
         <div className="flex min-w-0 flex-1 items-center gap-6">
-          <p className="shrink-0 flex items-center gap-2 text-lg font-black tracking-tight text-slate-900">
-            🧪 리허설 모드
+          <p className="shrink-0 flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900">
+            수업 리허설
           </p>
-          <div className="hidden min-w-[480px] max-w-2xl flex-1 md:block">
+          <div className="hidden min-w-[480px] max-w-2xl flex-1 xl:block">
             <PhaseIndicator currentPhase={session.currentPhase} />
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {showAutoFill && (
             <button
               type="button"
@@ -283,7 +263,7 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
               disabled={busy}
               className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50"
             >
-              ⚡ 전체 조 자동 채우기
+              예시로 자동 채우기
             </button>
           )}
           {phaseActionLabel[session.currentPhase] && (
@@ -291,21 +271,24 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
               type="button"
               onClick={handlePhaseAction}
               disabled={busy || !canAdvance}
-              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_14px_-2px_rgba(37,99,235,0.4)] hover:bg-blue-700 disabled:bg-slate-300 disabled:shadow-none"
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:bg-slate-300 disabled:shadow-none"
             >
               {phaseActionLabel[session.currentPhase]}
             </button>
           )}
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
           >
-            ✕ 닫기
+            닫기
           </button>
         </div>
       </header>
 
+      <p className="bg-blue-50 px-8 py-2 text-xs text-blue-800">
+        연습용 공간입니다. 실제 수업과 학생 기록에는 반영되지 않으며, 닫으면 연습 내용이 사라집니다.
+      </p>
       <div className="flex shrink-0 flex-wrap gap-2 border-b border-slate-100 bg-white px-8 py-3">
         {sortedSlots.map((slot) => {
           const team = teams[slotTeamIds[slot] ?? ''];
@@ -328,13 +311,13 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
           const teamId = slotTeamIds[slot];
           const ready = teamId && teams[teamId];
           return (
-            <div key={slot} className={slot === activeSlot ? 'h-full' : 'hidden'}>
+            <div key={sessionId + slot} className={slot === activeSlot ? 'h-full' : 'hidden'}>
               {ready ? (
                 <PreviewPane
                   sessionId={sessionId}
                   teamId={teamId}
                   data={data}
-                  onReset={() => handleResetSlot(slot)}
+                  onReset={handleReset}
                   fill
                 />
               ) : (
@@ -346,6 +329,6 @@ export function RehearsalOverlay({ sessionId, onClose }: { sessionId: string; on
           );
         })}
       </div>
-    </div>
+    </dialog>
   );
 }
