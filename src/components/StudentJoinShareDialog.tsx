@@ -16,6 +16,7 @@ export function StudentJoinShareDialog({
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const displayUrl = studentUrl.replace(/^https?:\/\//, '');
   useEffect(() => {
     const element = dialog.current;
     element?.showModal();
@@ -49,16 +50,13 @@ export function StudentJoinShareDialog({
         >
           <Icon name="close" />
         </button>
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-blue-600">
-          <Icon name="qr" className="h-6 w-6" />
-        </div>
-        <h2 id="student-join-title" className="mt-4 text-2xl font-bold text-slate-900">
+        <h2 id="student-join-title" className="text-2xl font-bold text-slate-900">
           학생 입장 QR
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">
           조별 대표 기기 한 대로 QR을 스캔하세요.
           <br />
-          스캔이 어려우면 아래 링크를 공유해주세요.
+          스캔이 어려우면 아래 짧은 링크나 수업 코드를 이용하세요.
         </p>
 
         <div className="mx-auto mt-5 inline-flex rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
@@ -75,22 +73,25 @@ export function StudentJoinShareDialog({
           <p className="mt-0.5 text-2xl font-bold tracking-[0.18em] text-blue-700">{sessionCode}</p>
         </div>
 
-        <div className="mt-4 flex overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-left">
-          <a
-            href={studentUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="min-w-0 flex-1 truncate px-3 py-3 text-sm text-blue-700 underline"
-          >
-            {studentUrl}
-          </a>
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="border-l border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            {copied ? '복사됨' : '링크 복사'}
-          </button>
+        <div className="mt-4 text-left">
+          <p className="mb-2 text-xs font-medium text-slate-500">직접 입장 링크</p>
+          <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+            <a
+              href={studentUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="min-w-0 flex-1 truncate px-3 py-3 font-mono text-xs text-blue-700 underline"
+            >
+              {displayUrl}
+            </a>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="border-l border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              {copied ? '복사됨' : '링크 복사'}
+            </button>
+          </div>
         </div>
 
         <button type="button" onClick={onClose} className="btn-primary mt-5 w-full">

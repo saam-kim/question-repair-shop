@@ -96,7 +96,7 @@ export function TeacherDashboard() {
 
   const { session, teams, assignments = {} } = data;
   const studentUrl = new URL(window.location.href);
-  studentUrl.hash = `/student/${sessionId}`;
+  studentUrl.hash = `/${session.sessionCode}`;
   const teamEntries = Object.entries(teams);
   const submittedTeamIds = teamEntries.filter(([, t]) => t.questionsSubmittedAt).map(([id]) => id);
   const notSubmittedTeams = teamEntries.filter(([, t]) => !t.questionsSubmittedAt);

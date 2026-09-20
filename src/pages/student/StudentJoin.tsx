@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getDoc } from 'firebase/firestore';
 import { useAnonAuth } from '../../hooks/useAnonAuth';
 import { sessionDocRef, findSessionByCode, joinOrCreateTeam } from '../../firebase/db';
@@ -11,15 +11,21 @@ import { Notice } from '../../components/Notice';
 
 export function StudentJoin() {
   const navigate = useNavigate();
+  const { shortcutCode } = useParams();
   const { uid, loading: authLoading, error: authError } = useAnonAuth();
-  const [code, setCode] = useState('');
+  const isShortcutCode = /^\d{6}$/.test(shortcutCode ?? '');
+  const [code, setCode] = useState(() => (isShortcutCode ? shortcutCode ?? '' : ''));
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [checkingResume, setCheckingResume] = useState(() => Boolean(studentStorage.read()));
+  const [checkingResume, setCheckingResume] = useState(() => !isShortcutCode && Boolean(studentStorage.read()));
   const [resumeInfo, setResumeInfo] = useState<{ sessionId: string } | null>(null);
+  const autoJoinAttempted = useRef(false);
 
   useEffect(() => {
     if (!uid) return;
+    if (isShortcutCode) {
+      return;
+    }
     const stored = studentStorage.read();
     if (!stored) {
       setCheckingResume(false);
@@ -35,11 +41,11 @@ export function StudentJoin() {
       })
       .catch(() => setError('이전 수업을 확인하지 못했습니다. 코드를 입력해 다시 입장해주세요.'))
       .finally(() => setCheckingResume(false));
-  }, [uid]);
+  }, [isShortcutCode, uid]);
 
-  async function handleJoin() {
+  const joinWithCode = useCallback(async (codeToJoin: string) => {
     if (!uid) return;
-    const trimmed = code.trim();
+    const trimmed = codeToJoin.trim();
     if (!/^\d{6}$/.test(trimmed)) {
       setError('6자리 숫자 코드를 입력해주세요.');
       return;
@@ -65,7 +71,13 @@ export function StudentJoin() {
     } finally {
       setJoining(false);
     }
-  }
+  }, [navigate, uid]);
+
+  useEffect(() => {
+    if (!isShortcutCode || !uid || checkingResume || autoJoinAttempted.current) return;
+    autoJoinAttempted.current = true;
+    void joinWithCode(shortcutCode ?? '');
+  }, [checkingResume, isShortcutCode, joinWithCode, shortcutCode, uid]);
 
   if (checkingResume && !authError) return <LoadingScreen />;
 
@@ -92,7 +104,7 @@ export function StudentJoin() {
           onSubmit={(event) => {
             event.preventDefault();
             if (resumeInfo) navigate('/student/' + resumeInfo.sessionId);
-            else void handleJoin();
+            else void joinWithCode(code);
           }}
         >
           {!resumeInfo && (

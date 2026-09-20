@@ -109,6 +109,8 @@ try {
   await page.getByRole('link', { name: '교사 화면으로' }).click();
   await button('새로운 수업 만들기').click();
   await page.getByRole('dialog').waitFor();
+  const directJoinUrl = await page.getByRole('dialog').getByRole('link').getAttribute('href');
+  assert.match(directJoinUrl, /#\/\d{6}$/);
   await snapshot('student-qr');
   await page.keyboard.press('Escape');
   assert.equal(await page.getByRole('dialog').count(), 0);
@@ -232,6 +234,13 @@ try {
   await page.evaluate(() => window.classroom.patch({ currentPhase: 'REVISION' }));
   await page.getByRole('heading', { name: '질문 수리하기' }).waitFor();
   await snapshot('revision-desktop');
+  // A short QR link must bypass any saved session and join the intended class.
+  await page.evaluate(() => {
+    window.classroom.setUid('shortcut-student');
+    location.hash = '/123456';
+  });
+  await page.getByRole('heading', { name: '무엇이 궁금한가요?' }).waitFor();
+  assert.equal(new URL(page.url()).hash, '#/student/s123456');
   assert.deepEqual(errors, []);
   console.log(
     'PASS: home, guide, mobile layouts, joining, classroom controls, errors, pause, end confirmation, dialog keyboard access',

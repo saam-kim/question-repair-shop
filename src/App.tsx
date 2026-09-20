@@ -17,6 +17,7 @@ export default function App() {
           <Route path="/teacher/:sessionId" element={<TeacherDashboard />} />
           <Route path="/student" element={<StudentJoin />} />
           <Route path="/student/:sessionId" element={<StudentApp />} />
+          <Route path="/:shortcutCode" element={<StudentJoin />} />
         </Routes>
       </Suspense>
     </HashRouter>
