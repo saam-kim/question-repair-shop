@@ -12,7 +12,7 @@ import { Notice } from '../../components/Notice';
 
 export function TeacherHome() {
   const navigate = useNavigate();
-  const { uid, loading: authLoading, error: authError } = useAnonAuth();
+  const { uid, loading: authLoading, error: authError, retry: retryAuth } = useAnonAuth();
   const [history, setHistory] = useState<Awaited<ReturnType<typeof listTeacherSessions>>>([]);
   const [historyError, setHistoryError] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -154,6 +154,11 @@ export function TeacherHome() {
             {(error || authError) && (
               <div className="mt-4">
                 <Notice>{error || authError}</Notice>
+                {authError && (
+                  <button type="button" className="btn-secondary mt-3" onClick={retryAuth}>
+                    다시 연결
+                  </button>
+                )}
               </div>
             )}
           </section>

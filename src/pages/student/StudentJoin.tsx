@@ -12,7 +12,7 @@ import { Notice } from '../../components/Notice';
 export function StudentJoin() {
   const navigate = useNavigate();
   const { shortcutCode } = useParams();
-  const { uid, loading: authLoading, error: authError } = useAnonAuth();
+  const { uid, loading: authLoading, error: authError, retry: retryAuth } = useAnonAuth();
   const isShortcutCode = /^\d{6}$/.test(shortcutCode ?? '');
   const [code, setCode] = useState(() => (isShortcutCode ? shortcutCode ?? '' : ''));
   const [joining, setJoining] = useState(false);
@@ -131,6 +131,11 @@ export function StudentJoin() {
           {(error || authError) && (
             <div className="mt-4">
               <Notice>{error || authError}</Notice>
+              {authError && (
+                <button type="button" className="btn-secondary mt-3" onClick={retryAuth}>
+                  다시 연결
+                </button>
+              )}
             </div>
           )}
           <button

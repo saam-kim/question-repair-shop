@@ -68,6 +68,21 @@ export function ClassGuide() {
               권장 시간은 예시입니다. 학급 규모와 진행 속도에 맞춰 조절하세요.
             </p>
           </div>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-5 md:col-span-2">
+            <p className="eyebrow text-blue-700">학교 네트워크 사전 점검</p>
+            <h3>수업 5분 전, 실제 교실 Wi-Fi에서 한 조만 먼저 연결해보세요.</h3>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-600">
+              <li>교사 기기에서 새 수업을 만들고, 학생 기기 한 대가 QR 또는 수업 코드로 입장되는지 확인합니다.</li>
+              <li>Chrome 또는 Edge 최신 버전을 사용하고, 시크릿 모드와 브라우저 데이터 삭제는 피해주세요.</li>
+              <li>
+                인증 또는 수업 연결 오류가 반복되면 네트워크 담당자에게 아래 주소의 HTTPS(443) 연결과 지속 연결(롱폴링)을 허용해 달라고 요청하세요.
+                <span className="mt-2 block break-all rounded-lg bg-white px-3 py-2 font-mono text-xs text-slate-700">
+                  question-repair-shop.vercel.app · identitytoolkit.googleapis.com · securetoken.googleapis.com · firestore.googleapis.com
+                </span>
+              </li>
+              <li>수업 중 연결이 잠시 끊기면 탭을 닫거나 새로고침하지 말고, 연결이 돌아온 뒤 다시 연결하거나 제출을 다시 시도합니다.</li>
+            </ol>
+          </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 px-6 py-5">
           <div>

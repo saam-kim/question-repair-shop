@@ -72,6 +72,9 @@ try {
   await snapshot('home-desktop');
   await button('수업 운영 가이드').click();
   assert.equal(await page.locator('details').getAttribute('open'), '');
+  await page.getByText('학교 네트워크 사전 점검', { exact: true }).waitFor();
+  await page.getByText('firestore.googleapis.com', { exact: false }).waitFor();
+  await snapshot('network-guide');
   assert.equal(new URL(page.url()).hash, '');
   // Preview rehearsals use the real in-memory store and database routing.
   // Reset must clear both submitted data and unsaved input, without touching the class.
