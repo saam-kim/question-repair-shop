@@ -73,7 +73,7 @@ export function ClassGuide() {
             <h3>수업 5분 전, 실제 교실 Wi-Fi에서 한 조만 먼저 연결해보세요.</h3>
             <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-600">
               <li>교사 기기에서 새 수업을 만들고, 학생 기기 한 대가 QR 또는 수업 코드로 입장되는지 확인합니다.</li>
-              <li>Chrome 또는 Edge 최신 버전을 사용하고, 시크릿 모드와 브라우저 데이터 삭제는 피해주세요.</li>
+              <li>Chrome·Edge 최신 버전 또는 Safari 16.4 이상을 사용하고, 시크릿 모드와 브라우저 데이터 삭제는 피해주세요.</li>
               <li>
                 인증 또는 수업 연결 오류가 반복되면 네트워크 담당자에게 아래 주소의 HTTPS(443) 연결과 지속 연결(롱폴링)을 허용해 달라고 요청하세요.
                 <span className="mt-2 block break-all rounded-lg bg-white px-3 py-2 font-mono text-xs text-slate-700">
@@ -81,6 +81,7 @@ export function ClassGuide() {
                 </span>
               </li>
               <li>수업 중 연결이 잠시 끊기면 탭을 닫거나 새로고침하지 말고, 연결이 돌아온 뒤 다시 연결하거나 제출을 다시 시도합니다.</li>
+              <li>Safari에서 오래 접속하지 않으면 기기에 저장된 로그인 정보가 지워질 수 있습니다. 필요한 결과는 수업 후 내려받으세요.</li>
             </ol>
           </div>
         </div>

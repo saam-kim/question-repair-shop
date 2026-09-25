@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 
 const fixture = (name) => fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 const server = await createServer({
@@ -40,7 +40,8 @@ const server = await createServer({
 let browser;
 try {
   await server.listen();
-  browser = await chromium.launch({
+  const browserType = process.env.PLAYWRIGHT_BROWSER === 'webkit' ? webkit : chromium;
+  browser = await browserType.launch({
     headless: true,
     ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
   });

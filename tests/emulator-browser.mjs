@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
 
 const projectId = 'demo-question-repair';
@@ -33,7 +33,8 @@ const errors = [];
 try {
   await server.listen();
   const base = `http://127.0.0.1:${server.httpServer.address().port}/`;
-  browser = await chromium.launch({
+  const browserType = process.env.PLAYWRIGHT_BROWSER === 'webkit' ? webkit : chromium;
+  browser = await browserType.launch({
     headless: true,
     ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
   });

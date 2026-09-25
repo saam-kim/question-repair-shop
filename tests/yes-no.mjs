@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 
 // Exercise the actual screens, replacing only the database boundary.
 // This server is local only and never connects to the production Firebase project.
@@ -27,7 +27,8 @@ const server = await createServer({
 let browser;
 try {
   await server.listen();
-  browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}) });
+  const browserType = process.env.PLAYWRIGHT_BROWSER === 'webkit' ? webkit : chromium;
+  browser = await browserType.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}) });
   const page = await browser.newPage({ viewport: { width: 1024, height: 768 } });
   page.setDefaultTimeout(10000);
   const errors = [];
