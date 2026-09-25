@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { useLocalDraft } from '../../../hooks/useLocalDraft';
 import { Notice } from '../../../components/Notice';
+import { SlowRequestHint } from '../../../components/SlowRequestHint';
 import { setTeamTopic } from '../../../firebase/db';
 import { Card } from '../../../components/Card';
 import { BottomActionBar } from '../../../components/BottomActionBar';
@@ -84,6 +85,7 @@ export function TopicStep({ sessionId, teamId }: { sessionId: string; teamId: st
         </div>
       </div>
 
+      {saving && <div className="px-5 pb-3"><SlowRequestHint /></div>}
       <BottomActionBar onClick={handleSubmit} disabled={!topic.trim() || saving}>
         {saving ? '저장하는 중...' : '다음 단계로'}
       </BottomActionBar>

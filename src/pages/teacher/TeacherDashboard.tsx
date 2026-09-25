@@ -21,6 +21,8 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { Brand } from '../../components/Brand';
 import { Icon } from '../../components/Icon';
 import { Notice } from '../../components/Notice';
+import { SlowRequestHint } from '../../components/SlowRequestHint';
+import { alternateNetworkModeUrl, isSchoolNetworkMode } from '../../lib/networkMode';
 import { ClassGuide } from '../../components/ClassGuide';
 import { respondingStatus } from '../../lib/teamStatus';
 import { StudentJoinShareDialog } from '../../components/StudentJoinShareDialog';
@@ -48,6 +50,9 @@ export function TeacherDashboard() {
         <button className="btn-secondary mt-4" onClick={() => window.location.reload()}>
           다시 연결
         </button>
+        <a className="btn-secondary ml-2 mt-4" href={alternateNetworkModeUrl()}>
+          {isSchoolNetworkMode() ? '기본 연결 방식' : '학교망 연결 방식'}
+        </a>
       </div>
     );
 
@@ -374,6 +379,7 @@ export function TeacherDashboard() {
             <Notice>{assignError}</Notice>
           </div>
         )}
+        {busy && <div className="mb-4"><SlowRequestHint /></div>}
         {session.status === 'PAUSED' && (
           <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             학생 화면이 일시정지 상태입니다. ‘활동 재개’를 누르면 이어서 진행합니다.

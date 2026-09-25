@@ -8,6 +8,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { Brand } from '../../components/Brand';
 import { Icon } from '../../components/Icon';
 import { Notice } from '../../components/Notice';
+import { SlowRequestHint } from '../../components/SlowRequestHint';
 
 export function StudentJoin() {
   const navigate = useNavigate();
@@ -146,6 +147,8 @@ export function StudentJoin() {
             {joining ? '수업에 입장하고 있습니다' : resumeInfo ? '이어서 하기' : '수업 입장하기'}
             <Icon name="arrow" />
           </button>
+          {joining && <div className="mt-4"><SlowRequestHint /></div>}
+          {authLoading && <div className="mt-4"><SlowRequestHint auth /></div>}
           {resumeInfo && (
             <button
               type="button"

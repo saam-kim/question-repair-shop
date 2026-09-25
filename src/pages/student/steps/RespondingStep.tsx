@@ -1,4 +1,5 @@
 import { Notice } from '../../../components/Notice';
+import { SlowRequestHint } from '../../../components/SlowRequestHint';
 import { useLocalDraft } from '../../../hooks/useLocalDraft';
 import { useState } from 'react';
 import { submitResponseAndFeedback, markRespondingDone } from '../../../firebase/db';
@@ -76,6 +77,7 @@ export function RespondingStep(props: RespondingProps) {
         >
           {finishing ? '저장하는 중…' : '응답 완료'}
         </button>
+        {finishing && <div className="mt-4"><SlowRequestHint /></div>}
       </div>
     );
   }
@@ -269,6 +271,7 @@ function RespondingQuestion({
           <Notice>{error}</Notice>
         </div>
       )}
+      {saving && <div className="px-5 pb-3"><SlowRequestHint /></div>}
       <BottomActionBar
         onClick={() => (stage === 'ANSWER' ? setStage('FEEDBACK') : handleFeedbackSubmit())}
         disabled={saving || !isAnswerValid}

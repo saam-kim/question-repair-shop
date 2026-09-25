@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocalDraft } from '../../../hooks/useLocalDraft';
 import { Notice } from '../../../components/Notice';
+import { SlowRequestHint } from '../../../components/SlowRequestHint';
 import { submitRevisions, type RevisionInput } from '../../../firebase/db';
 import { Card } from '../../../components/Card';
 import { BottomActionBar } from '../../../components/BottomActionBar';
@@ -314,6 +315,7 @@ export function RevisionStep({
         </div>
       </div>
 
+      {submitting && <div className="px-5 pb-3"><SlowRequestHint /></div>}
       <BottomActionBar onClick={handleSubmit} disabled={!allFilled || submitting}>
         {submitting ? '제출하는 중...' : '수리 완료하고 제출하기'}
       </BottomActionBar>

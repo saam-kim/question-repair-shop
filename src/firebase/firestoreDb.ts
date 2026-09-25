@@ -1,5 +1,6 @@
 ﻿import {
   getFirestore,
+  initializeFirestore,
   doc,
   getDoc,
   updateDoc,
@@ -13,6 +14,7 @@
   type Firestore,
 } from 'firebase/firestore';
 import { app, useEmulators } from './config';
+import { isSchoolNetworkMode } from '../lib/networkMode';
 import { joinTeamTransaction } from './joinTeam';
 import { createPokemonPool } from '../lib/pokemonNames';
 import type {
@@ -59,7 +61,9 @@ let dbInstance: Firestore | null = null;
 
 export function getDb(): Firestore {
   if (!dbInstance) {
-    dbInstance = getFirestore(app);
+    dbInstance = isSchoolNetworkMode()
+      ? initializeFirestore(app, { experimentalForceLongPolling: true })
+      : getFirestore(app);
     if (useEmulators) connectFirestoreEmulator(dbInstance, '127.0.0.1', 8080);
   }
   return dbInstance;

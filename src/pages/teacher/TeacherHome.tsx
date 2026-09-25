@@ -9,6 +9,7 @@ import { Brand } from '../../components/Brand';
 import { Icon } from '../../components/Icon';
 import { ClassGuide } from '../../components/ClassGuide';
 import { Notice } from '../../components/Notice';
+import { SlowRequestHint } from '../../components/SlowRequestHint';
 
 export function TeacherHome() {
   const navigate = useNavigate();
@@ -161,6 +162,8 @@ export function TeacherHome() {
                 )}
               </div>
             )}
+            {creating && <div className="mt-4"><SlowRequestHint /></div>}
+            {authLoading && <div className="mt-4"><SlowRequestHint auth /></div>}
           </section>
           <aside className="hero-example" aria-label="질문 수리 활동 예시">
             <div className="mb-5 flex items-center justify-between">

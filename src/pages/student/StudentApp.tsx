@@ -10,6 +10,7 @@ import { phaseStepLabel } from '../../lib/phases';
 import { StudentPhaseContent } from './StudentPhaseContent';
 import { joinOrCreateTeam } from '../../firebase/db';
 import { Notice } from '../../components/Notice';
+import { alternateNetworkModeUrl, isSchoolNetworkMode } from '../../lib/networkMode';
 
 export function StudentApp() {
   const { sessionId = '' } = useParams();
@@ -62,6 +63,9 @@ function StudentSessionApp({ sessionId }: StudentSessionAppProps) {
         <button className="btn-secondary mt-4" onClick={() => window.location.reload()}>
           다시 연결
         </button>
+        <a className="btn-secondary ml-2 mt-4" href={alternateNetworkModeUrl()}>
+          {isSchoolNetworkMode() ? '기본 연결 방식' : '학교망 연결 방식'}
+        </a>
       </div>
     );
 
