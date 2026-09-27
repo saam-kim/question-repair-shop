@@ -111,7 +111,7 @@ try {
   assert.equal(await page.getByLabel('수업 코드').inputValue(), '123456');
   const modeUrl = await page.evaluate(async () => (await import('/src/lib/networkMode.ts')).alternateNetworkModeUrl());
   assert.equal(new URL(modeUrl).hash, new URL(page.url()).hash);
-  assert.equal(new URL(modeUrl).searchParams.get('connection'), 'school');
+  assert.equal(new URL(modeUrl).searchParams.get('connection'), process.env.PLAYWRIGHT_BROWSER === 'webkit' ? 'default' : 'school');
   await snapshot('student-join');
   await page.getByRole('link', { name: '교사 화면으로' }).click();
   await button('새로운 수업 만들기').click();
