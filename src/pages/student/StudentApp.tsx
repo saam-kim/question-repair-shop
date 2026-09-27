@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAnonAuth } from '../../hooks/useAnonAuth';
 import { useSession } from '../../hooks/useSession';
 import { studentStorage } from '../../lib/storage';
@@ -11,6 +11,7 @@ import { StudentPhaseContent } from './StudentPhaseContent';
 import { joinOrCreateTeam } from '../../firebase/db';
 import { Notice } from '../../components/Notice';
 import { alternateNetworkModeUrl, isSchoolNetworkMode } from '../../lib/networkMode';
+import { ConnectionStatus } from '../../components/ConnectionStatus';
 
 export function StudentApp() {
   const { sessionId = '' } = useParams();
@@ -24,8 +25,10 @@ interface StudentSessionAppProps {
 function StudentSessionApp({ sessionId }: StudentSessionAppProps) {
   const navigate = useNavigate();
   const { uid, loading: authLoading, error: authError } = useAnonAuth();
-
-  const [teamId, setTeamId] = useState<string | null>(null);
+  const { state } = useLocation();
+  const [resolvedTeamId, setTeamId] = useState<string | null>(null);
+  // The join page has just confirmed membership on the server. Avoid repeating its transaction.
+  const teamId = resolvedTeamId ?? (state?.joinedUid === uid ? state?.joinedTeamId as string : null);
   const {
     data,
     loading,
@@ -149,6 +152,7 @@ function StudentSessionApp({ sessionId }: StudentSessionAppProps) {
         teamNumber={myTeam.teamNumber}
         stepLabel={phaseStepLabel(session.currentPhase)}
       />
+      <ConnectionStatus />
       <StudentPhaseContent
         sessionId={sessionId}
         teamId={teamId}

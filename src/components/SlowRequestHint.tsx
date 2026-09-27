@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ConnectionRecoveryButton } from './ConnectionStatus';
 
 export function SlowRequestHint({ auth = false }: { auth?: boolean }) {
   const [slow, setSlow] = useState(false);
@@ -13,13 +14,16 @@ export function SlowRequestHint({ auth = false }: { auth?: boolean }) {
     <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
       {auth ? (
         <>
-          기기 인증이 지연되고 있습니다. Wi-Fi 상태를 확인하고, 계속 멈춰 있으면 새로고침해주세요.
+          기기 인증 응답을 기다리고 있습니다. 계속 멈춰 있으면 인증을 다시 시작해주세요.
           <button type="button" onClick={() => window.location.reload()} className="ml-2 font-semibold underline">
             새로고침
           </button>
         </>
       ) : (
-        '서버 응답이 늦습니다. Wi-Fi 상태를 확인해주세요. 계속 멈춰 있으면 새로고침 후 저장 여부를 확인하고 다시 제출하세요.'
+        <>
+          서버 확인을 기다리고 있습니다. 연결이 돌아오면 이어서 처리하므로, 같은 내용을 다시 제출하지 말고 이 창을 열어두세요.
+          <div className="mt-2"><ConnectionRecoveryButton /></div>
+        </>
       )}
     </div>
   );

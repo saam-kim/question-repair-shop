@@ -1,25 +1,12 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, getDocsFromServer, onSnapshot, runTransaction } from 'firebase/firestore';
 import { getRehearsal, isRehearsal, subscribeRehearsal } from '../lib/rehearsalStore';
 import { getDb, sessionDocRef } from '../firebase/db';
+import { applyConfirmedPatch, onConfirmedUpdate } from '../lib/confirmedUpdates';
+import { onConnectionRefresh, withConnectionRecovery } from '../lib/connectionRecovery';
 import type { Session, SessionData, Team } from '../types';
 
-interface UseSessionResult {
-  data: SessionData | null;
-  loading: boolean;
-  error: string | null;
-}
-
-/**
- * 세션 문서 + teams 서브컬렉션을 각각 실시간 구독해 하나로 합친다.
- * 교실 규모(수십 개 조 이하)에서는 teams 컬렉션 전체를 필터 없이 듣는 편이
- * 조별로 리스너를 따로 만드는 것보다 단순하고 충분히 저렴하다.
- */
-export function useSession(
-  sessionId: string | null,
-  includeTeams = true,
-  teacherUid?: string | null,
-): UseSessionResult {
+export function useSession(sessionId: string | null, includeTeams = true, teacherUid?: string | null) {
   const [session, setSession] = useState<Session | null>(null);
   const [teams, setTeams] = useState<Record<string, Team>>({});
   const [sessionLoaded, setSessionLoaded] = useState(false);
@@ -27,21 +14,12 @@ export function useSession(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!sessionId) {
-      setSession(null);
-      setTeams({});
-      setSessionLoaded(false);
-      setTeamsLoaded(false);
-      return;
-    }
-
-    setSessionLoaded(false);
-    setTeamsLoaded(false);
-
     setSession(null);
     setTeams({});
+    setSessionLoaded(false);
+    setTeamsLoaded(false);
     setError(null);
-
+    if (!sessionId) return;
     if (isRehearsal(sessionId)) {
       const update = () => {
         const demo = getRehearsal(sessionId);
@@ -53,60 +31,139 @@ export function useSession(
       update();
       return subscribeRehearsal(sessionId, update);
     }
+
+    let active = true;
+    let currentSession: Session | null = null;
+    let sessionVersion = 0;
+    let teamsVersion = 0;
+    let reading = false;
+    let readingTeams = false;
+    let haveTeams = false;
+    let unsubSession: (() => void) | undefined;
     let unsubTeams: (() => void) | undefined;
-    const unsubSession = onSnapshot(
-      sessionDocRef(sessionId),
-      { includeMetadataChanges: true },
-      (snap) => {
-        if (snap.metadata.hasPendingWrites) return;
-        const next = snap.exists() ? (snap.data() as Session) : null;
-        setSession(next);
-        setSessionLoaded(true);
-        const canReadTeams =
-          includeTeams &&
-          next?.schemaVersion === 2 &&
-          (!teacherUid || next.teacherUid === teacherUid);
-        if (!canReadTeams) {
-          unsubTeams?.();
-          unsubTeams = undefined;
-          setTeams({});
-          setTeamsLoaded(true);
-        } else if (!unsubTeams) {
-          setTeamsLoaded(false);
-          unsubTeams = onSnapshot(
-            collection(getDb(), 'qrsSessions', sessionId, 'teams'),
-            { includeMetadataChanges: true },
-            (teamsSnap) => {
-              if (teamsSnap.metadata.hasPendingWrites) return;
-              const result: Record<string, Team> = {};
-              teamsSnap.forEach((d) => {
-                result[d.id] = d.data() as Team;
-              });
-              setTeams(result);
-              setTeamsLoaded(true);
-            },
-            (err) => {
-              setError(err.message);
-              setTeamsLoaded(true);
-            },
-          );
-        }
-      },
-      (err) => {
-        setError(err.message);
+    let retryTimer: number | undefined;
+    const db = getDb();
+    const sRef = sessionDocRef(sessionId);
+    const tRef = collection(db, 'qrsSessions', sessionId, 'teams');
+    const canReadTeams = () => includeTeams && currentSession?.schemaVersion === 2 &&
+      (!teacherUid || currentSession.teacherUid === teacherUid);
+
+    function failed(reason: unknown) {
+      if (!active) return;
+      const code = (reason as { code?: string }).code;
+      if (code === 'permission-denied' || code === 'unauthenticated') {
+        setError('수업 접근 권한을 확인하지 못했습니다. 다시 연결해주세요.');
         setSessionLoaded(true);
         setTeamsLoaded(true);
-      },
-    );
-    return () => {
-      unsubSession();
+      } else if (!retryTimer) {
+        retryTimer = window.setTimeout(() => {
+          retryTimer = undefined;
+          startListeners();
+        }, 5000);
+      }
+    }
+
+    function acceptSession(next: Session | null) {
+      currentSession = next;
+      sessionVersion++;
+      setSession(next);
+      setSessionLoaded(true);
+      setError(null);
+      if (!canReadTeams()) {
+        unsubTeams?.();
+        unsubTeams = undefined;
+        setTeams({});
+        setTeamsLoaded(true);
+      } else if (!unsubTeams) {
+        unsubTeams = onSnapshot(tRef, { includeMetadataChanges: true }, (snapshot) => {
+          if (!active || snapshot.metadata.hasPendingWrites || snapshot.metadata.fromCache) return;
+          teamsVersion++;
+          haveTeams = true;
+          setTeams(Object.fromEntries(snapshot.docs.map((doc) => [doc.id, doc.data() as Team])));
+          setTeamsLoaded(true);
+          setError(null);
+        }, failed);
+      }
+    }
+
+    function startListeners() {
+      if (!active) return;
+      unsubSession?.();
       unsubTeams?.();
+      unsubTeams = undefined;
+      unsubSession = onSnapshot(sRef, { includeMetadataChanges: true }, (snapshot) => {
+        if (!active || snapshot.metadata.hasPendingWrites || snapshot.metadata.fromCache) return;
+        acceptSession(snapshot.exists() ? snapshot.data() as Session : null);
+      }, failed);
+    }
+
+    async function refreshTeams() {
+      if (!active || !canReadTeams() || readingTeams) return;
+      readingTeams = true;
+      const version = teamsVersion;
+      try {
+        const snapshot = await withConnectionRecovery(getDocsFromServer(tRef));
+        if (active && version === teamsVersion) {
+          haveTeams = true;
+          teamsVersion++;
+          setTeams(Object.fromEntries(snapshot.docs.map((doc) => [doc.id, doc.data() as Team])));
+          setTeamsLoaded(true);
+        }
+      } catch (reason) { failed(reason); }
+      finally { readingTeams = false; }
+    }
+
+    async function refresh(full = false) {
+      if (!active || reading || !navigator.onLine || document.visibilityState === 'hidden') return;
+      reading = true;
+      const version = sessionVersion;
+      try {
+        // Independent server request: a stalled Listen stream must not freeze the class phase.
+        const snapshot = await withConnectionRecovery(runTransaction(db, (tx) => tx.get(sRef), { maxAttempts: 1 }));
+        if (!active || version !== sessionVersion) return;
+        const next = snapshot.exists() ? snapshot.data() as Session : null;
+        const changedPhase = next?.currentPhase !== currentSession?.currentPhase;
+        acceptSession(next);
+        if (full || changedPhase || !haveTeams) void refreshTeams();
+      } catch (reason) { failed(reason); }
+      finally { reading = false; }
+    }
+
+    const stopConfirmed = onConfirmedUpdate((update) => {
+      if (update.sessionId !== sessionId || !active) return;
+      if (update.teamId) {
+        teamsVersion++;
+        const id = update.teamId;
+        setTeams((previous) => previous[id]
+          ? { ...previous, [id]: applyConfirmedPatch(previous[id], update.patch) }
+          : previous);
+      } else if (currentSession) {
+        acceptSession(applyConfirmedPatch(currentSession, update.patch));
+      }
+    });
+    const stopRefresh = onConnectionRefresh(() => {
+      startListeners();
+      void refresh(true);
+    });
+    startListeners();
+    const initialFallback = window.setTimeout(() => { void refresh(true); }, 4000);
+    // Poll only the small session document; team queries run during recovery/phase changes.
+    const interval = window.setInterval(() => {
+      if (currentSession?.status !== 'ENDED') void refresh();
+    }, 15000 + Math.floor(Math.random() * 3000));
+    return () => {
+      active = false;
+      unsubSession?.();
+      unsubTeams?.();
+      stopConfirmed();
+      stopRefresh();
+      window.clearTimeout(retryTimer);
+      window.clearTimeout(initialFallback);
+      window.clearInterval(interval);
     };
   }, [sessionId, includeTeams, teacherUid]);
 
-  const loading = Boolean(sessionId) && (!sessionLoaded || !teamsLoaded);
-  const data: SessionData | null =
-    sessionId && session ? { session, teams, assignments: session.assignments ?? {} } : null;
-
-  return { data, loading, error };
+  const data: SessionData | null = sessionId && session
+    ? { session, teams, assignments: session.assignments ?? {} } : null;
+  return { data, loading: Boolean(sessionId) && (!sessionLoaded || !teamsLoaded), error };
 }

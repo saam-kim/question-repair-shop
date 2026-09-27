@@ -10,6 +10,7 @@ import { Icon } from '../../components/Icon';
 import { ClassGuide } from '../../components/ClassGuide';
 import { Notice } from '../../components/Notice';
 import { SlowRequestHint } from '../../components/SlowRequestHint';
+import { withConnectionRecovery } from '../../lib/connectionRecovery';
 
 export function TeacherHome() {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ export function TeacherHome() {
         cancelled = true;
       };
     }
-    getDoc(sessionDocRef(stored.sessionId))
+    withConnectionRecovery(getDoc(sessionDocRef(stored.sessionId)))
       .then((snap) => {
         const session = snap.data();
         if (

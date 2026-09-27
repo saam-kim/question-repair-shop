@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { alternateNetworkModeUrl, isSchoolNetworkMode } from '../lib/networkMode';
+import { ConnectionRecoveryButton } from './ConnectionStatus';
 
 export function LoadingScreen() {
   const [slow, setSlow] = useState(false);
@@ -16,8 +17,9 @@ export function LoadingScreen() {
       {slow && (
         <div className="mt-2 max-w-sm space-y-3">
           <p className="text-sm leading-6 text-slate-600">
-            연결이 예상보다 오래 걸립니다. Wi-Fi 상태를 확인한 뒤 다시 시도할 수 있습니다.
+            수업 정보 확인이 늦어지고 있습니다. 페이지를 닫지 않고 연결을 다시 시도할 수 있습니다.
           </p>
+          <ConnectionRecoveryButton />
           <a className="btn-secondary" href={alternateNetworkModeUrl()}>
             {isSchoolNetworkMode() ? '기본 연결 방식으로 다시 시도' : '학교망 연결 방식으로 다시 시도'}
           </a>

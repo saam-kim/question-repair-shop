@@ -22,6 +22,7 @@ import { Brand } from '../../components/Brand';
 import { Icon } from '../../components/Icon';
 import { Notice } from '../../components/Notice';
 import { SlowRequestHint } from '../../components/SlowRequestHint';
+import { ConnectionStatus } from '../../components/ConnectionStatus';
 import { alternateNetworkModeUrl, isSchoolNetworkMode } from '../../lib/networkMode';
 import { ClassGuide } from '../../components/ClassGuide';
 import { respondingStatus } from '../../lib/teamStatus';
@@ -326,6 +327,7 @@ export function TeacherDashboard() {
           </div>
         </div>
       </header>
+      <ConnectionStatus />
       <main className="workspace-main">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>

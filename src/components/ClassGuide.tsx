@@ -80,8 +80,8 @@ export function ClassGuide() {
                   question-repair-shop.vercel.app · identitytoolkit.googleapis.com · securetoken.googleapis.com · firestore.googleapis.com
                 </span>
               </li>
-              <li>수업 중 연결이 잠시 끊기면 탭을 닫거나 새로고침하지 말고, 연결이 돌아온 뒤 다시 연결하거나 제출을 다시 시도합니다.</li>
-              <li>처음 수업을 불러오는 화면이 오래 멈추면 화면의 ‘학교망 연결 방식으로 다시 시도’를 눌러보세요. Safari에서는 이 방식을 기본으로 사용합니다. 화면 갱신이 느려질 수 있습니다.</li>
+              <li>수업 중 연결이 잠시 끊기면 탭을 열어두세요. 연결이 돌아오면 저장과 화면 갱신을 이어갑니다. 저장 중에는 같은 내용을 다시 제출하지 않아도 됩니다.</li>
+              <li>화면이 오래 바뀌지 않으면 ‘화면 다시 동기화’를 누르세요. 작성 내용을 유지한 채 연결을 다시 확인합니다. 학교망에 맞춘 연결 방식을 모든 브라우저에서 기본으로 사용합니다.</li>
               <li>Safari에서 오래 접속하지 않으면 기기에 저장된 로그인 정보가 지워질 수 있습니다. 필요한 결과는 수업 후 내려받으세요.</li>
             </ol>
           </div>

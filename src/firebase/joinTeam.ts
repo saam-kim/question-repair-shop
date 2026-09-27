@@ -9,7 +9,7 @@ export async function joinTeamTransaction(
 ) {
   const sRef = doc(db, 'qrsSessions', sessionId);
   // One document per identity prevents duplicates across concurrent tabs.
-  const maxAttempts = retryEmulatorConflicts ? 24 : 4;
+  const maxAttempts = retryEmulatorConflicts ? 24 : 1;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       return await runTransaction(
@@ -43,7 +43,7 @@ export async function joinTeamTransaction(
           tx.set(tRef, team);
           return { teamId: uid, teamNumber, nickname };
         },
-        { maxAttempts: 20 },
+        { maxAttempts: 5 },
       );
     } catch (error) {
       const code = (error as { code?: string }).code;

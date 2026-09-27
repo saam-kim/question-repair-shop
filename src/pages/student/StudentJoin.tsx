@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getDoc } from 'firebase/firestore';
 import { useAnonAuth } from '../../hooks/useAnonAuth';
-import { sessionDocRef, findSessionByCode, joinOrCreateTeam } from '../../firebase/db';
+import { sessionDocRef, joinOrCreateTeam } from '../../firebase/db';
 import { studentStorage } from '../../lib/storage';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Brand } from '../../components/Brand';
 import { Icon } from '../../components/Icon';
 import { Notice } from '../../components/Notice';
 import { SlowRequestHint } from '../../components/SlowRequestHint';
+import { withConnectionRecovery } from '../../lib/connectionRecovery';
 
 export function StudentJoin() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export function StudentJoin() {
       setCheckingResume(false);
       return;
     }
-    getDoc(sessionDocRef(stored.sessionId))
+    withConnectionRecovery(getDoc(sessionDocRef(stored.sessionId)))
       .then((snap) => {
         if (snap.exists() && snap.data().schemaVersion === 2 && snap.data().status !== 'ENDED') {
           setResumeInfo({ sessionId: stored.sessionId });
@@ -54,19 +55,10 @@ export function StudentJoin() {
     setJoining(true);
     setError(null);
     try {
-      const sessionId = await findSessionByCode(trimmed);
-      if (!sessionId) {
-        setError('해당 코드의 수업을 찾을 수 없습니다. 코드를 다시 확인해주세요.');
-        return;
-      }
-      const snap = await getDoc(sessionDocRef(sessionId));
-      if (snap.data()?.status === 'ENDED') {
-        setError('이미 종료된 수업입니다.');
-        return;
-      }
+      const sessionId = `s${trimmed}`;
       const { teamId } = await joinOrCreateTeam(sessionId, uid);
       studentStorage.write({ sessionId, teamId, sessionCode: trimmed });
-      navigate(`/student/${sessionId}`);
+      navigate(`/student/${sessionId}`, { state: { joinedUid: uid, joinedTeamId: teamId } });
     } catch (e) {
       setError(e instanceof Error ? e.message : '입장에 실패했습니다. 다시 시도해주세요.');
     } finally {

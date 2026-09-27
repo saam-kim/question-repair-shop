@@ -1,5 +1,7 @@
 ﻿import {
   getFirestore,
+  disableNetwork,
+  enableNetwork,
   initializeFirestore,
   doc,
   getDoc,
@@ -16,6 +18,8 @@
 import { app, useEmulators } from './config';
 import { isSchoolNetworkMode } from '../lib/networkMode';
 import { joinTeamTransaction } from './joinTeam';
+import { configureConnectionRecovery, withConnectionRecovery } from '../lib/connectionRecovery';
+import { publishConfirmedUpdate } from '../lib/confirmedUpdates';
 import { createPokemonPool } from '../lib/pokemonNames';
 import type {
   Session,
@@ -67,6 +71,11 @@ export function getDb(): Firestore {
       ? initializeFirestore(app, { experimentalForceLongPolling: true })
       : getFirestore(app);
     if (useEmulators) connectFirestoreEmulator(dbInstance, '127.0.0.1', 8080);
+    const db = dbInstance;
+    configureConnectionRecovery(async () => {
+      try { await disableNetwork(db); }
+      finally { await enableNetwork(db); }
+    });
   }
   return dbInstance;
 }
@@ -79,11 +88,21 @@ export function teamDocRef(sessionId: string, teamId: string) {
   return doc(getDb(), 'qrsSessions', sessionId, 'teams', teamId);
 }
 
+async function saveConfirmed(sessionId: string, teamId: string | null, patch: Record<string, unknown>) {
+  const ref = teamId ? teamDocRef(sessionId, teamId) : sessionDocRef(sessionId);
+  await withConnectionRecovery(updateDoc(ref, patch));
+  publishConfirmedUpdate({ sessionId, teamId, patch });
+}
+
 function generateSessionCode(): string {
   return String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
 }
 
-export async function createSession(
+export function createSession(teacherUid: string) {
+  return withConnectionRecovery(createSessionOnce(teacherUid));
+}
+
+async function createSessionOnce(
   teacherUid: string,
 ): Promise<{ sessionId: string; sessionCode: string }> {
   for (let attempt = 0; attempt < 8; attempt++) {
@@ -141,7 +160,7 @@ export function joinOrCreateTeam(sessionId: string, uid: string) {
   const key = sessionId + ':' + uid;
   const pending = pendingJoins.get(key);
   if (pending) return pending;
-  const request = joinOrCreateTeamOnce(sessionId, uid).finally(() => pendingJoins.delete(key));
+  const request = withConnectionRecovery(joinOrCreateTeamOnce(sessionId, uid)).finally(() => pendingJoins.delete(key));
   pendingJoins.set(key, request);
   return request;
 }
@@ -156,7 +175,7 @@ async function joinOrCreateTeamOnce(
 }
 
 export async function setTeamTopic(sessionId: string, teamId: string, topic: string) {
-  await updateDoc(teamDocRef(sessionId, teamId), { topic });
+  await saveConfirmed(sessionId, teamId, { topic });
 }
 
 export async function submitQuestions(
@@ -182,11 +201,11 @@ export async function submitQuestions(
       createdAt: now,
     });
   });
-  await updateDoc(teamDocRef(sessionId, teamId), payload);
+  await saveConfirmed(sessionId, teamId, payload);
 }
 
 export async function writeAssignments(sessionId: string, assignments: Assignments) {
-  await updateDoc(sessionDocRef(sessionId), { assignments });
+  await saveConfirmed(sessionId, null, { assignments });
 }
 
 export async function submitResponseAndFeedback(
@@ -206,7 +225,7 @@ export async function submitResponseAndFeedback(
       createdAt: now,
     },
   };
-  await updateDoc(teamDocRef(sessionId, myTeamId), payload);
+  await saveConfirmed(sessionId, myTeamId, payload);
 }
 
 export async function markRespondingDone(
@@ -214,7 +233,7 @@ export async function markRespondingDone(
   myTeamId: string,
   targetTeamId: string,
 ) {
-  await updateDoc(teamDocRef(sessionId, myTeamId), {
+  await saveConfirmed(sessionId, myTeamId, {
     [`respondingProgress.${targetTeamId}`]: 'DONE',
   });
 }
@@ -231,30 +250,30 @@ export async function submitRevisions(
   (Object.keys(revisions) as QuestionId[]).forEach((qid) => {
     payload[`revisions.${qid}`] = withoutUndefined({ ...revisions[qid], createdAt: now });
   });
-  await updateDoc(teamDocRef(sessionId, teamId), payload);
+  await saveConfirmed(sessionId, teamId, payload);
 }
 
 export async function startClass(sessionId: string) {
-  await updateDoc(sessionDocRef(sessionId), { status: 'ACTIVE', currentPhase: 'QUESTION' });
+  await saveConfirmed(sessionId, null, { status: 'ACTIVE', currentPhase: 'QUESTION' });
 }
 
 export async function pauseClass(sessionId: string) {
-  await updateDoc(sessionDocRef(sessionId), { status: 'PAUSED' });
+  await saveConfirmed(sessionId, null, { status: 'PAUSED' });
 }
 
 export async function resumeClass(sessionId: string) {
-  await updateDoc(sessionDocRef(sessionId), { status: 'ACTIVE' });
+  await saveConfirmed(sessionId, null, { status: 'ACTIVE' });
 }
 
 export async function advancePhase(sessionId: string, nextPhase: SessionPhase) {
-  await updateDoc(sessionDocRef(sessionId), {
+  await saveConfirmed(sessionId, null, {
     currentPhase: nextPhase,
     status: 'ACTIVE' as SessionStatus,
   });
 }
 
 export async function endClass(sessionId: string) {
-  await updateDoc(sessionDocRef(sessionId), { status: 'ENDED', currentPhase: 'ENDED' });
+  await saveConfirmed(sessionId, null, { status: 'ENDED', currentPhase: 'ENDED' });
 }
 
 export async function touchLastActive(sessionId: string, teamId: string) {
@@ -262,9 +281,9 @@ export async function touchLastActive(sessionId: string, teamId: string) {
 }
 
 export async function listTeacherSessions(uid: string) {
-  const result = await getDocs(
+  const result = await withConnectionRecovery(getDocs(
     query(collection(getDb(), 'qrsSessions'), where('teacherUid', '==', uid)),
-  );
+  ));
   return result.docs
     .map((d) => ({ id: d.id, ...(d.data() as Session) }))
     .filter((s) => s.schemaVersion === 2)
@@ -274,11 +293,11 @@ export async function listTeacherSessions(uid: string) {
 /** Ended classes are frozen; delete all team records and their parent atomically. */
 export async function deleteSession(sessionId: string) {
   const ref = sessionDocRef(sessionId);
-  const snap = await getDoc(ref);
+  const snap = await withConnectionRecovery(getDoc(ref));
   if (snap.data()?.status !== 'ENDED') throw new Error('수업을 먼저 종료해주세요.');
-  const teams = await getDocs(collection(getDb(), 'qrsSessions', sessionId, 'teams'));
+  const teams = await withConnectionRecovery(getDocs(collection(getDb(), 'qrsSessions', sessionId, 'teams')));
   const batch = writeBatch(getDb());
   teams.forEach((team) => batch.delete(team.ref));
   batch.delete(ref);
-  await batch.commit();
+  await withConnectionRecovery(batch.commit());
 }
