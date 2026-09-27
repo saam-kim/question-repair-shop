@@ -5,13 +5,14 @@ import { useState } from 'react';
 import { submitResponseAndFeedback, markRespondingDone } from '../../../firebase/db';
 import { LikertButtons } from '../../../components/LikertButtons';
 import { YesNoButtons } from '../../../components/YesNoButtons';
+import { MultiSelectButtons } from '../../../components/MultiSelectButtons';
 import { EssayAnswerInput } from '../../../components/EssayAnswerInput';
 import { ShortAnswerInput } from '../../../components/ShortAnswerInput';
 import { BottomActionBar } from '../../../components/BottomActionBar';
 import { Card } from '../../../components/Card';
 import { getApplicableProblemTypes } from '../../../lib/problemTypes';
 import { formatLikertResponse } from '../../../lib/likertScale';
-import type { ProblemType, QuestionId, Team } from '../../../types';
+import type { AnswerValue, ProblemType, QuestionId, Team } from '../../../types';
 
 const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
 
@@ -26,7 +27,7 @@ interface RespondingProps {
 }
 interface AnswerDraft {
   stage: 'ANSWER' | 'FEEDBACK';
-  value: number | string | null;
+  value: AnswerValue | null;
   problemTypes: ProblemType[];
   comment: string;
 }
@@ -35,7 +36,7 @@ function validDraft(value: unknown): value is AnswerDraft {
   const d = value as AnswerDraft;
   return (
     ['ANSWER', 'FEEDBACK'].includes(d.stage) &&
-    (d.value === null || typeof d.value === 'string' || typeof d.value === 'number') &&
+    (d.value === null || typeof d.value === 'string' || typeof d.value === 'number' || (Array.isArray(d.value) && d.value.every((v) => typeof v === 'string'))) &&
     Array.isArray(d.problemTypes) &&
     d.problemTypes.every((p) => typeof p === 'string') &&
     typeof d.comment === 'string'
@@ -81,13 +82,14 @@ export function RespondingStep(props: RespondingProps) {
       </div>
     );
   }
-  const qIndex = Math.max(index, firstMissing);
+  const qIndex = Math.min(index, QIDS.length - 1);
   return (
     <RespondingQuestion
       key={props.targetTeamId + QIDS[qIndex]}
       {...props}
       qIndex={qIndex}
       onNext={() => setIndex(qIndex + 1)}
+      onPrevious={() => setIndex(qIndex - 1)}
     />
   );
 }
@@ -100,10 +102,17 @@ function RespondingQuestion({
   progressTotal,
   qIndex,
   onNext,
-}: RespondingProps & { qIndex: number; onNext: () => void }) {
+  onPrevious,
+  myTeam,
+}: RespondingProps & { qIndex: number; onNext: () => void; onPrevious: () => void }) {
   const [draft, setDraft, clearDraft] = useLocalDraft<AnswerDraft>(
     `${sessionId}_${teamId}_response_${targetTeamId}_${QIDS[qIndex]}`,
-    () => ({ stage: 'ANSWER', value: null, problemTypes: [], comment: '' }),
+    () => ({
+      stage: 'ANSWER',
+      value: myTeam?.responsesGiven?.[targetTeamId]?.[QIDS[qIndex]]?.value ?? null,
+      problemTypes: myTeam?.feedbackGiven?.[targetTeamId]?.[QIDS[qIndex]]?.problemTypes ?? [],
+      comment: myTeam?.feedbackGiven?.[targetTeamId]?.[QIDS[qIndex]]?.comment ?? '',
+    }),
     validDraft,
   );
   const { stage, value, problemTypes, comment } = draft;
@@ -157,8 +166,9 @@ function RespondingQuestion({
     if (value === null || String(value).trim() === '') return '';
     if (scaleType === 'YES_NO') return String(value);
     if (scaleType === 'LIKERT_5') {
-      return formatLikertResponse(value, question?.likertLabels);
+      return formatLikertResponse(value as number | string, question?.likertLabels);
     }
+    if (scaleType === 'MULTI_SELECT') return Array.isArray(value) ? value.join(', ') : '';
     if (scaleType === 'SHORT_ANSWER') {
       return `${value}${question?.unit ? ` (${question.unit})` : ''}`;
     }
@@ -175,7 +185,12 @@ function RespondingQuestion({
             typeof value === 'string' &&
             value.startsWith('기타: ') &&
             value.slice(4).trim().length > 0)
-        : value !== null && String(value).trim().length > 0;
+        : scaleType === 'MULTI_SELECT'
+          ? Array.isArray(value) && value.length > 0 && value.every((v) =>
+              question?.options?.includes(v) ||
+              (Boolean(question?.hasOtherOption) && v.startsWith('기타: ') && v.slice(4).trim().length > 0),
+            )
+          : value !== null && String(value).trim().length > 0;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -197,13 +212,19 @@ function RespondingQuestion({
             <div className="flex flex-col justify-center">
               {scaleType === 'LIKERT_5' && (
                 <LikertButtons
-                  value={value}
+                  value={Array.isArray(value) ? null : value}
                   onChange={setValue}
                   customLabels={question?.likertLabels}
                   hasOtherOption={question?.hasOtherOption}
                 />
               )}
-              {scaleType === 'YES_NO' && <YesNoButtons value={value} onChange={setValue} />}
+              {scaleType === 'YES_NO' && <YesNoButtons value={Array.isArray(value) ? null : value} onChange={setValue} />}
+              {scaleType === 'MULTI_SELECT' && <MultiSelectButtons
+                value={Array.isArray(value) ? value : []}
+                options={question?.options ?? []}
+                hasOtherOption={question?.hasOtherOption}
+                onChange={setValue}
+              />}
               {scaleType === 'ESSAY' && (
                 <EssayAnswerInput
                   value={typeof value === 'string' ? value : ''}
@@ -213,7 +234,7 @@ function RespondingQuestion({
               {(scaleType === 'SHORT_ANSWER' ||
                 (scaleType as string) === 'NUMBER' ||
                 (scaleType as string) === 'MULTIPLE_CHOICE') && (
-                <ShortAnswerInput value={value} onChange={setValue} unit={question?.unit} />
+                <ShortAnswerInput value={Array.isArray(value) ? null : value} onChange={setValue} unit={question?.unit} />
               )}
             </div>
           </div>
@@ -275,6 +296,12 @@ function RespondingQuestion({
       <BottomActionBar
         onClick={() => (stage === 'ANSWER' ? setStage('FEEDBACK') : handleFeedbackSubmit())}
         disabled={saving || !isAnswerValid}
+        secondary={
+          <div className="flex gap-2">
+            {qIndex > 0 && <button type="button" disabled={saving} onClick={onPrevious} className="btn-secondary">← 이전 질문</button>}
+            {stage === 'FEEDBACK' && <button type="button" disabled={saving} onClick={() => setStage('ANSWER')} className="btn-secondary">응답 수정</button>}
+          </div>
+        }
       >
         {stage === 'ANSWER'
           ? '다음'

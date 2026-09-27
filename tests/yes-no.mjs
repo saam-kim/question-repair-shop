@@ -45,6 +45,7 @@ try {
   await page.locator('textarea').nth(0).fill('부모님이 스마트폰 사용을 통제하나요?');
   await page.locator('textarea').nth(1).fill('스마트폰 사용에 만족하나요?');
   await page.locator('textarea').nth(2).fill('하루 사용 시간은?');
+  await page.getByRole('radio', { name: '친구들이 수리할 질문으로 지정' }).nth(1).check();
   // Switching from an incomplete custom scale must not block a binary question.
   await button('척도 직접 수정').nth(0).click();
   await page.getByRole('textbox').nth(1).fill('');
@@ -63,6 +64,7 @@ try {
   assert.equal(questions.q1.scaleType, 'YES_NO');
   assert.equal(questions.q1.likertLabels, undefined);
   assert.equal(questions.q1.hasOtherOption, undefined);
+  assert.equal(questions.q2.intentionalFlaw, true);
   assert.equal(questions.q2.scaleType, 'LIKERT_5');
   assert.equal(questions.q3.scaleType, 'SHORT_ANSWER');
 
@@ -79,6 +81,10 @@ try {
   await page.getByText('방금 응답:', { exact: false }).waitFor();
   assert.match(await page.getByText('방금 응답:', { exact: false }).innerText(), /아니요/);
   await button('다음 질문 →').click();
+  await button('← 이전 질문').click();
+  await button('예').click();
+  await button('다음').click();
+  await button('다음 질문 →').click();
   await button('4 그렇다').click();
   assert.equal(await button('예').count(), 0);
   await button('다음').click();
@@ -87,7 +93,7 @@ try {
   await button('다음').click();
   await button('응답 완료').click();
   await page.waitForFunction(() => window.testApp.calls.some((c) => c.name === 'done'));
-  assert.deepEqual((await calls('response')).map((c) => c.args[4]), ['아니요', 4, '2']);
+  assert.deepEqual((await calls('response')).map((c) => c.args[4]), ['아니요', '예', 4, '2']);
 
   await stage('revision');
   await page.getByText('선택지: 예 / 아니요', { exact: false }).waitFor();
@@ -104,6 +110,35 @@ try {
   await stage('results');
   await page.getByText('질문 수리 완료!', { exact: true }).waitFor();
   await page.getByText('질문 수리 사례', { exact: true }).waitFor();
+  await stage('questions');
+  await page.locator('textarea').nth(0).fill('즐기는 활동은?');
+  await page.locator('textarea').nth(1).fill('만족하나요?');
+  await page.locator('textarea').nth(2).fill('이유는?');
+  await page.getByRole('radio', { name: '친구들이 수리할 질문으로 지정' }).nth(0).check();
+  await button('복수 선택').nth(0).click();
+  for (const [i, value] of ['독서', '운동', '음악'].entries()) {
+    await page.getByRole('textbox', { name: `질문 1 선택지 ${i + 1}` }).fill(value);
+  }
+  await page.getByRole('checkbox', { name: '기타 (직접 입력) 추가' }).check();
+  await button('예/아니요').nth(1).click();
+  await button('서술형 주관식').nth(2).click();
+  if (process.env.MULTI_SCREENSHOT) await page.screenshot({ path: process.env.MULTI_SCREENSHOT, fullPage: true });
+  await button('제출 전 확인하기').click();
+  await button('우리 조 질문지 제출하기').click();
+  await page.waitForFunction(() => window.testApp.calls.filter((c) => c.name === 'questions').length === 2);
+  const multiQuestion = (await calls('questions')).at(-1).args[2].q1;
+  assert.deepEqual(multiQuestion.options, ['독서', '운동', '음악']);
+  assert.equal(multiQuestion.hasOtherOption, true);
+  await stage('multi');
+  const multi = page.getByRole('group', { name: '복수 선택 응답' });
+  await multi.getByRole('checkbox', { name: '독서' }).check();
+  await multi.getByRole('checkbox', { name: '운동' }).check();
+  await multi.getByRole('checkbox', { name: '기타 (직접 작성)' }).check();
+  assert.equal(await button('다음').isDisabled(), true);
+  await page.getByRole('textbox', { name: '기타를 선택한 이유' }).fill('그림 그리기');
+  await button('다음').click();
+  await button('다음 질문 →').click();
+  assert.deepEqual((await calls('response')).at(-1).args[4], ['독서', '운동', '기타: 그림 그리기']);
   assert.deepEqual(errors, []);
   console.log('PASS: binary question creation, preview, answer selection/storage, mixed types, revisions, rehearsal and results');
 } finally {

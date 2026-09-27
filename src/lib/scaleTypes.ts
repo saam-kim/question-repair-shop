@@ -18,6 +18,11 @@ export const SCALE_TYPES: ScaleTypeInfo[] = [
     description: '예 또는 아니요 중 하나를 선택하여 응답',
   },
   {
+    id: 'MULTI_SELECT',
+    label: '복수 선택',
+    description: '여러 선택지를 동시에 고를 수 있는 질문',
+  },
+  {
     id: 'ESSAY',
     label: '서술형 주관식',
     description: '생각이나 이유를 긴 문장으로 자유롭게 작성',

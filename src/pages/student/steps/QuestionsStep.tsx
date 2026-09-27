@@ -7,6 +7,7 @@ import { Card } from '../../../components/Card';
 import { BottomActionBar } from '../../../components/BottomActionBar';
 import { DEFAULT_LIKERT_LABELS, getLikertLabels } from '../../../lib/likertScale';
 import { SCALE_TYPES } from '../../../lib/scaleTypes';
+import { QuestionWritingGuide } from '../../../components/QuestionWritingGuide';
 import type { QuestionId, ScaleType } from '../../../types';
 
 const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
@@ -17,6 +18,8 @@ interface QuestionDraft {
   isCustomLikert: boolean;
   likertLabels: string[];
   hasOtherOption: boolean;
+  intentionalFlaw: boolean;
+  options: string[];
   unit: string;
 }
 
@@ -27,12 +30,19 @@ function emptyDraft(): QuestionDraft {
     isCustomLikert: false,
     likertLabels: [...DEFAULT_LIKERT_LABELS],
     hasOtherOption: false,
+    intentionalFlaw: false,
+    options: ['', '', ''],
     unit: '',
   };
 }
 
 function isDraftValid(d: QuestionDraft): boolean {
   if (!d.text.trim()) return false;
+  if (d.scaleType === 'MULTI_SELECT') {
+    const options = d.options ?? [];
+    if (options.length < 2 || options.length > 5 || options.some((o) => !o.trim())) return false;
+    if (new Set(options.map((o) => o.trim())).size !== options.length) return false;
+  }
   if (d.scaleType === 'LIKERT_5' && d.isCustomLikert) {
     return d.likertLabels.every((l) => l.trim().length > 0);
   }
@@ -60,7 +70,8 @@ export function QuestionsStep({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const allFilled = QIDS.every((qid) => isDraftValid(drafts[qid]));
+  const flawCount = QIDS.filter((qid) => drafts[qid].intentionalFlaw).length;
+  const allFilled = flawCount === 1 && QIDS.every((qid) => isDraftValid(drafts[qid]));
 
   function updateDraft(qid: QuestionId, patch: Partial<QuestionDraft>) {
     setDrafts((prev) => ({ ...prev, [qid]: { ...prev[qid], ...patch } }));
@@ -71,6 +82,20 @@ export function QuestionsStep({
       const labels = [...prev[qid].likertLabels];
       labels[index] = val;
       return { ...prev, [qid]: { ...prev[qid], likertLabels: labels } };
+    });
+  }
+
+  function selectFlawedQuestion(qid: QuestionId) {
+    setDrafts((prev) => Object.fromEntries(
+      QIDS.map((id) => [id, { ...prev[id], intentionalFlaw: id === qid }]),
+    ) as Record<QuestionId, QuestionDraft>);
+  }
+
+  function updateOption(qid: QuestionId, index: number, value: string) {
+    setDrafts((prev) => {
+      const options = [...(prev[qid].options ?? ['', '', ''])];
+      options[index] = value;
+      return { ...prev, [qid]: { ...prev[qid], options } };
     });
   }
 
@@ -93,7 +118,9 @@ export function QuestionsStep({
                   d.scaleType === 'LIKERT_5' && d.isCustomLikert
                     ? d.likertLabels.map((l) => l.trim())
                     : undefined,
-                hasOtherOption: d.scaleType === 'LIKERT_5' ? d.hasOtherOption : undefined,
+                hasOtherOption: ['LIKERT_5', 'MULTI_SELECT'].includes(d.scaleType) ? d.hasOtherOption : undefined,
+                intentionalFlaw: Boolean(d.intentionalFlaw),
+                options: d.scaleType === 'MULTI_SELECT' ? d.options.map((o) => o.trim()) : undefined,
                 unit: d.scaleType === 'SHORT_ANSWER' && d.unit.trim() ? d.unit.trim() : undefined,
               },
             ];
@@ -141,6 +168,7 @@ export function QuestionsStep({
                         </span>
                       </div>
                       <p className="mt-1 text-base font-medium text-slate-800">{d.text}</p>
+                      {d.intentionalFlaw && <p className="mt-2 text-xs font-semibold text-amber-700">친구들이 수리할 질문</p>}
 
                       {d.scaleType === 'LIKERT_5' && (
                         <div className="mt-2.5 flex flex-wrap gap-1.5 text-xs">
@@ -159,6 +187,12 @@ export function QuestionsStep({
 
                       {d.scaleType === 'YES_NO' && (
                         <p className="mt-2 text-xs text-blue-700">선택지: 예 / 아니요</p>
+                      )}
+                      {d.scaleType === 'MULTI_SELECT' && (
+                        <p className="mt-2 text-xs text-blue-700">
+                          여러 개 선택 가능 · {d.options.map((o, i) => `${i + 1}. ${o}`).join(' / ')}
+                          {d.hasOtherOption ? ' / 기타(직접 작성)' : ''}
+                        </p>
                       )}
 
                       {d.scaleType === 'ESSAY' && (
@@ -228,6 +262,10 @@ export function QuestionsStep({
               <Notice>{error}</Notice>
             </div>
           )}
+          <div className="sticky top-0 z-10 mt-5 bg-white/95 py-2 backdrop-blur-sm"><QuestionWritingGuide /></div>
+          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              세 질문 중 <strong>딱 1개</strong>는 유의 사항을 일부러 어겨 만들어보세요. 그 질문에 ‘친구들이 수리할 질문’을 표시해야 제출할 수 있습니다.
+          </p>
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
             {QIDS.map((qid, idx) => {
               const d = drafts[qid];
@@ -245,6 +283,15 @@ export function QuestionsStep({
                     rows={3}
                     className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-base outline-none focus:border-blue-500"
                   />
+                  <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
+                    <input
+                      type="radio"
+                      name="intentional-flaw"
+                      checked={Boolean(d.intentionalFlaw)}
+                      onChange={() => selectFlawedQuestion(qid)}
+                    />
+                    친구들이 수리할 질문으로 지정
+                  </label>
 
                   <p className="mt-3 text-xs font-semibold text-slate-500">응답 방식</p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -332,6 +379,34 @@ export function QuestionsStep({
                     <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
                       선택지: 예 / 아니요
                       <p className="mt-1 text-slate-500">응답자가 두 선택지 중 하나를 고릅니다.</p>
+                    </div>
+                  )}
+                  {d.scaleType === 'MULTI_SELECT' && (
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                      <p className="text-xs font-semibold text-slate-600">복수 선택지 (2~5개)</p>
+                      <p className="mt-1 text-xs text-slate-500">응답자가 해당하는 항목을 여러 개 고를 수 있습니다.</p>
+                      <div className="mt-3 space-y-2">
+                        {(d.options ?? ['', '', '']).map((option, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-4 text-xs text-slate-500">{i + 1}</span>
+                            <input
+                              aria-label={`질문 ${idx + 1} 선택지 ${i + 1}`}
+                              maxLength={160}
+                              value={option}
+                              onChange={(e) => updateOption(qid, i, e.target.value)}
+                              className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+                            />
+                            {(d.options?.length ?? 3) > 2 && (
+                              <button type="button" onClick={() => updateDraft(qid, { options: d.options.filter((_, n) => n !== i) })} className="text-xs text-slate-500 underline">삭제</button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {(d.options?.length ?? 3) < 5 && <button type="button" onClick={() => updateDraft(qid, { options: [...(d.options ?? ['', '', '']), ''] })} className="mt-3 text-xs font-semibold text-blue-700">+ 선택지 추가</button>}
+                      <label className="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3 text-xs text-slate-700">
+                        <input type="checkbox" checked={d.hasOtherOption} onChange={(e) => updateDraft(qid, { hasOtherOption: e.target.checked })} />
+                        기타 (직접 입력) 추가
+                      </label>
                     </div>
                   )}
 

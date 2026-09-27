@@ -1,4 +1,4 @@
-import type { FeedbackEntry, QuestionId, ScaleType } from '../types';
+import type { AnswerValue, FeedbackEntry, QuestionId, ScaleType } from '../types';
 
 export const SAMPLE_TOPICS = [
   '학생들의 학교생활 만족도',
@@ -12,6 +12,7 @@ export interface SampleQuestionSpec {
   scaleType: ScaleType;
   likertLabels?: string[];
   hasOtherOption?: boolean;
+  intentionalFlaw?: boolean;
   unit?: string;
 }
 
@@ -23,6 +24,7 @@ export const SAMPLE_QUESTION_SPECS: Record<QuestionId, SampleQuestionSpec> = {
   q2: {
     text: '나는 이 주제 관련 활동에 자주 참여하고 만족하는 편이다.',
     scaleType: 'ESSAY',
+    intentionalFlaw: true,
   },
   q3: {
     text: '최근 1주일 동안 이 활동에 참여한 시간은 대략 얼마인가요?',
@@ -35,9 +37,11 @@ export function sampleResponseValue(
   scaleType: ScaleType,
   _likertLabels?: string[],
   unit?: string,
-): number | string {
+  options?: string[],
+): AnswerValue {
   if (scaleType === 'LIKERT_5') return 4;
   if (scaleType === 'YES_NO') return '예';
+  if (scaleType === 'MULTI_SELECT') return options?.slice(0, 2) ?? [];
   if (scaleType === 'ESSAY') {
     return '평소에 관심이 많아 자주 찾아보고 있으며, 활동을 통해 많은 것을 배우고 있습니다.';
   }

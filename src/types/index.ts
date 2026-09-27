@@ -34,7 +34,8 @@ export interface Session {
 export type QuestionId = 'q1' | 'q2' | 'q3';
 export const QUESTION_IDS: QuestionId[] = ['q1', 'q2', 'q3'];
 
-export type ScaleType = 'LIKERT_5' | 'YES_NO' | 'ESSAY' | 'SHORT_ANSWER';
+export type ScaleType = 'LIKERT_5' | 'YES_NO' | 'MULTI_SELECT' | 'ESSAY' | 'SHORT_ANSWER';
+export type AnswerValue = number | string | string[];
 
 export interface QuestionItem {
   text: string;
@@ -45,6 +46,8 @@ export interface QuestionItem {
   likertLabels?: string[];
   /** LIKERT_5일 때 '기타' 직접 입력 선택지 허용 여부 */
   hasOtherOption?: boolean;
+  /** 친구들이 고쳐 볼 문항으로 지정했는지 여부 */
+  intentionalFlaw?: boolean;
   /** SHORT_ANSWER일 때 선택적으로 붙는 단위 힌트 (예: "권", "시간", "명") */
   unit?: string;
   /** 레거시 지원용 선택지 목록 */
@@ -53,7 +56,7 @@ export interface QuestionItem {
 
 export interface ResponseEntry {
   /** LIKERT_5는 숫자(1~5) 또는 "기타: [내용]", YES_NO는 "예"/"아니요", ESSAY/SHORT_ANSWER는 문자열 */
-  value: number | string;
+  value: AnswerValue;
   respondedAt: number;
 }
 

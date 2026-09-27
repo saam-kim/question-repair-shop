@@ -84,7 +84,7 @@ export function TeacherHome() {
     <div className="landing">
       <header className="landing-nav">
         <Brand />
-        <Link to="/student" className="btn-secondary">
+        <Link to="/student" className="btn-primary">
           학생 입장 <Icon name="arrow" className="h-4 w-4" />
         </Link>
       </header>

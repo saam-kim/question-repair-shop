@@ -38,7 +38,7 @@ export const PROBLEM_TYPES: ProblemTypeInfo[] = [
     severity: 'REQUIRED',
     requiredRuleLabel: '필수 조건 ③ 응답 선택지가 서로 겹치지 않게 하기',
     description: '하나의 응답이 둘 이상의 선택지에 해당하지 않도록 응답 선택지를 구성해야 합니다.',
-    onlyForScaleType: ['LIKERT_5'],
+    onlyForScaleType: ['LIKERT_5', 'MULTI_SELECT'],
   },
   {
     id: 'LEADING',

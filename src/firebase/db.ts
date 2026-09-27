@@ -1,6 +1,6 @@
 import * as remote from './firestoreDb';
 import { isRehearsal, updateRehearsal } from '../lib/rehearsalStore';
-import type { QuestionId, Assignments, SessionPhase, ProblemType } from '../types';
+import type { QuestionId, Assignments, SessionPhase, ProblemType, AnswerValue } from '../types';
 import type { QuestionInput, RevisionInput } from './firestoreDb';
 export type { QuestionInput, RevisionInput } from './firestoreDb';
 export { listTeacherSessions, deleteSession } from './firestoreDb';
@@ -42,7 +42,7 @@ export async function submitResponseAndFeedback(
   team: string,
   target: string,
   qid: QuestionId,
-  value: number | string,
+  value: AnswerValue,
   feedback: { problemTypes: ProblemType[]; comment: string },
 ) {
   if (!isRehearsal(id))

@@ -1,4 +1,5 @@
 import { Card } from '../../../components/Card';
+import { QuestionResponseSummary } from '../../../components/QuestionResponseSummary';
 import { getProblemTypeInfo } from '../../../lib/problemTypes';
 import {
   getFeedbackForQuestion,
@@ -37,6 +38,7 @@ export function FeedbackReceivedStep({
                 <p className="mt-1 text-lg font-medium text-slate-900">
                   {myTeam.questions?.[qid]?.text}
                 </p>
+                <QuestionResponseSummary teams={allTeams} targetId={teamId} qid={qid} question={myTeam.questions?.[qid]} />
 
                 <div className="mt-3 flex flex-wrap gap-2 text-sm">
                   <span className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">

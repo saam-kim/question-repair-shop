@@ -15,7 +15,7 @@ import {
   writeAssignments,
   deleteSession,
 } from '../../firebase/db';
-import { downloadClassroom } from '../../lib/exportClassroom';
+import { downloadClassroom, downloadClassroomHTML } from '../../lib/exportClassroom';
 import { TeacherResults } from './TeacherResults';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Brand } from '../../components/Brand';
@@ -428,17 +428,25 @@ export function TeacherDashboard() {
           <div>
             <h2 className="text-sm font-semibold">수업 기록 보관</h2>
             <p className="mt-1 text-xs leading-6 text-slate-500">
-              질문, 응답, 피드백과 수리 결과를 엑셀에서 열 수 있는 CSV로 내려받습니다.
+              보기 좋은 HTML 보고서와 엑셀에서 열 수 있는 CSV를 각각 내려받습니다.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <button
+              className="btn-secondary"
+              onClick={() => downloadClassroomHTML(data)}
+              disabled={!teamEntries.length}
+            >
+              <Icon name="download" className="h-4 w-4" />
+              HTML 결과 보기
+            </button>
             <button
               className="btn-secondary"
               onClick={() => downloadClassroom(data)}
               disabled={!teamEntries.length}
             >
               <Icon name="download" className="h-4 w-4" />
-              결과 내려받기
+              엑셀용 CSV 내려받기
             </button>
             {session.status === 'ENDED' && (
               <button

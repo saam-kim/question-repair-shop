@@ -19,12 +19,19 @@ service cloud.firestore {
         && text(labels[0], 160) && text(labels[1], 160) && text(labels[2], 160)
         && text(labels[3], 160) && text(labels[4], 160)
         && q.get('hasOtherOption', false) is bool && text(q.get('unit', ''), 40)
-        && !('options' in q);
+        && q.get('intentionalFlaw', false) is bool
+        && (q.scaleType != 'MULTI_SELECT' || (q.get('options', []) is list
+          && q.options.size() >= 2 && q.options.size() <= 5
+          && q.options[0] is string && q.options[0].size() > 0 && q.options[0].size() <= 160
+          && q.options[1] is string && q.options[1].size() > 0 && q.options[1].size() <= 160
+          && (q.options.size() < 3 || (q.options[2] is string && q.options[2].size() > 0 && q.options[2].size() <= 160))
+          && (q.options.size() < 4 || (q.options[3] is string && q.options[3].size() > 0 && q.options[3].size() <= 160))
+          && (q.options.size() < 5 || (q.options[4] is string && q.options[4].size() > 0 && q.options[4].size() <= 160))));
     }
     function question(q) {
-      return q.keys().hasOnly(['text', 'scaleType', 'order', 'createdAt', 'likertLabels', 'hasOtherOption', 'unit', 'options'])
+      return q.keys().hasOnly(['text', 'scaleType', 'order', 'createdAt', 'likertLabels', 'hasOtherOption', 'unit', 'options', 'intentionalFlaw'])
         && text(q.text, 2000) && q.text.size() > 0
-        && q.scaleType in ['YES_NO', 'LIKERT_5', 'ESSAY', 'SHORT_ANSWER']
+        && q.scaleType in ['YES_NO', 'LIKERT_5', 'MULTI_SELECT', 'ESSAY', 'SHORT_ANSWER']
         && q.order is int && q.order >= 1 && q.order <= 3 && q.createdAt is number && format(q);
     }
     function questions(q) {
@@ -34,7 +41,7 @@ service cloud.firestore {
     function revision(r) {
       return r.keys().hasOnly(['originalText', 'revisedText', 'revisionReasons', 'scaleType', 'createdAt', 'likertLabels', 'hasOtherOption', 'unit', 'options'])
         && text(r.originalText, 2000) && text(r.revisedText, 2000) && r.revisedText.size() > 0
-        && r.scaleType in ['YES_NO', 'LIKERT_5', 'ESSAY', 'SHORT_ANSWER']
+        && r.scaleType in ['YES_NO', 'LIKERT_5', 'MULTI_SELECT', 'ESSAY', 'SHORT_ANSWER']
         && r.createdAt is number && format(r) && r.revisionReasons is list && r.revisionReasons.hasOnly(['CLARITY', 'SINGLE_TOPIC', 'REMOVE_LEADING', 'SPECIFICITY', 'EASIER_TO_ANSWER', 'OTHER']);
     }
     function feedback(f) {
@@ -42,11 +49,22 @@ service cloud.firestore {
         && f.createdAt is number && f.problemTypes is list
         && f.problemTypes.hasOnly(['NONE', 'UNCLEAR', 'DOUBLE_BARRELED', 'OVERLAPPING_OPTIONS', 'LEADING', 'ANSWERING_DIFFICULT', 'OTHER']);
     }
+    function selectedOption(v, q) {
+      return v is string && v.size() > 0 && v.size() <= 2000
+        && (q.options.hasAny([v]) || (q.get('hasOtherOption', false) == true && v.matches('기타: .+')));
+    }
     function answer(a, q) {
       return a.keys().hasOnly(['value', 'respondedAt']) && a.respondedAt is number
         && ((q.scaleType == 'YES_NO' && a.value in ['예', '아니요'])
         || (q.scaleType == 'LIKERT_5' && ((a.value is int && a.value >= 1 && a.value <= 5)
           || (q.get('hasOtherOption', false) == true && text(a.value, 6000) && a.value.matches('기타: .*'))))
+        || (q.scaleType == 'MULTI_SELECT' && a.value is list && a.value.size() >= 1 && a.value.size() <= 6
+          && selectedOption(a.value[0], q)
+          && (a.value.size() < 2 || selectedOption(a.value[1], q))
+          && (a.value.size() < 3 || selectedOption(a.value[2], q))
+          && (a.value.size() < 4 || selectedOption(a.value[3], q))
+          && (a.value.size() < 5 || selectedOption(a.value[4], q))
+          && (a.value.size() < 6 || selectedOption(a.value[5], q)))
         || (q.scaleType in ['ESSAY', 'SHORT_ANSWER'] && text(a.value, 6000) && a.value.size() > 0));
     }
     function pair(a, f, q, key) {

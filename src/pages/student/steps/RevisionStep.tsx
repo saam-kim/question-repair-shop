@@ -10,6 +10,7 @@ import { getProblemTypeInfo } from '../../../lib/problemTypes';
 import { REVISION_REASONS } from '../../../lib/revisionReasons';
 import { DEFAULT_LIKERT_LABELS } from '../../../lib/likertScale';
 import { SCALE_TYPES } from '../../../lib/scaleTypes';
+import { QuestionResponseSummary } from '../../../components/QuestionResponseSummary';
 import type { QuestionId, RevisionReason, ScaleType, Team } from '../../../types';
 
 const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
@@ -20,6 +21,7 @@ interface RevisionDraft {
   isCustomLikert: boolean;
   likertLabels: string[];
   hasOtherOption: boolean;
+  options: string[];
   unit: string;
   reasons: RevisionReason[];
 }
@@ -34,6 +36,7 @@ function draftFromQuestion(team: Team, qid: QuestionId): RevisionDraft {
     likertLabels:
       hasCustomLabels && q?.likertLabels ? [...q.likertLabels] : [...DEFAULT_LIKERT_LABELS],
     hasOtherOption: Boolean(q?.hasOtherOption),
+    options: q?.options ? [...q.options] : ['', '', ''],
     unit: q?.unit ?? '',
     reasons: [],
   };
@@ -41,6 +44,7 @@ function draftFromQuestion(team: Team, qid: QuestionId): RevisionDraft {
 
 function isDraftValid(d: RevisionDraft): boolean {
   if (!d.text.trim()) return false;
+  if (d.scaleType === 'MULTI_SELECT' && (d.options.length < 2 || d.options.length > 5 || d.options.some((o) => !o.trim()) || new Set(d.options.map((o) => o.trim())).size !== d.options.length)) return false;
   if (d.scaleType === 'LIKERT_5' && d.isCustomLikert) {
     return d.likertLabels.every((l) => l.trim().length > 0);
   }
@@ -81,6 +85,14 @@ export function RevisionStep({
     });
   }
 
+  function updateOption(qid: QuestionId, index: number, value: string) {
+    setDrafts((prev) => {
+      const options = [...prev[qid].options];
+      options[index] = value;
+      return { ...prev, [qid]: { ...prev[qid], options } };
+    });
+  }
+
   function toggleReason(qid: QuestionId, reason: RevisionReason) {
     setDrafts((prev) => ({
       ...prev,
@@ -116,7 +128,8 @@ export function RevisionStep({
                   d.scaleType === 'LIKERT_5' && d.isCustomLikert
                     ? d.likertLabels.map((l) => l.trim())
                     : undefined,
-                hasOtherOption: d.scaleType === 'LIKERT_5' ? d.hasOtherOption : undefined,
+                hasOtherOption: ['LIKERT_5', 'MULTI_SELECT'].includes(d.scaleType) ? d.hasOtherOption : undefined,
+                options: d.scaleType === 'MULTI_SELECT' ? d.options.map((o) => o.trim()) : undefined,
                 unit: d.scaleType === 'SHORT_ANSWER' && d.unit.trim() ? d.unit.trim() : undefined,
               },
             ];
@@ -175,6 +188,7 @@ export function RevisionStep({
                       })}
                     </div>
                   )}
+                  <QuestionResponseSummary teams={allTeams} targetId={teamId} qid={qid} question={myTeam.questions?.[qid]} />
 
                   <label className="mt-4 block text-sm font-semibold text-slate-700">수리 후</label>
                   <textarea
@@ -273,6 +287,22 @@ export function RevisionStep({
                     <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
                       선택지: 예 / 아니요
                       <p className="mt-1 text-slate-500">응답자가 두 선택지 중 하나를 고릅니다.</p>
+                    </div>
+                  )}
+                  {d.scaleType === 'MULTI_SELECT' && (
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs font-semibold text-slate-600">복수 선택지 (2~5개)</p>
+                      <div className="mt-2 space-y-2">
+                        {d.options.map((option, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-4 text-xs text-slate-500">{i + 1}</span>
+                            <input aria-label={`수리 후 질문 ${idx + 1} 선택지 ${i + 1}`} maxLength={160} value={option} onChange={(e) => updateOption(qid, i, e.target.value)} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
+                            {d.options.length > 2 && <button type="button" className="text-xs text-slate-500 underline" onClick={() => updateDraft(qid, { options: d.options.filter((_, n) => n !== i) })}>삭제</button>}
+                          </div>
+                        ))}
+                      </div>
+                      {d.options.length < 5 && <button type="button" className="mt-3 text-xs font-semibold text-blue-700" onClick={() => updateDraft(qid, { options: [...d.options, ''] })}>+ 선택지 추가</button>}
+                      <label className="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3 text-xs text-slate-700"><input type="checkbox" checked={d.hasOtherOption} onChange={(e) => updateDraft(qid, { hasOtherOption: e.target.checked })} />기타 (직접 입력) 추가</label>
                     </div>
                   )}
 

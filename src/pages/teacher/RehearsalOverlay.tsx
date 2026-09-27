@@ -114,6 +114,7 @@ export function RehearsalOverlay({ onClose }: { onClose: () => void }) {
                         scaleType: spec.scaleType,
                         likertLabels: spec.likertLabels,
                         hasOtherOption: spec.hasOtherOption,
+                        intentionalFlaw: spec.intentionalFlaw,
                         unit: spec.unit,
                       },
                     ];
@@ -145,7 +146,7 @@ export function RehearsalOverlay({ onClose }: { onClose: () => void }) {
                 for (const qid of QUESTION_IDS) {
                   const q = targetTeam.questions?.[qid];
                   if (!q) continue;
-                  const value = sampleResponseValue(q.scaleType, q.likertLabels, q.unit);
+                  const value = sampleResponseValue(q.scaleType, q.likertLabels, q.unit, q.options);
                   const feedback = sampleFeedbackForQuestion(qid, reviewerIndex);
                   await submitResponseAndFeedback(
                     sessionId,
@@ -198,6 +199,7 @@ export function RehearsalOverlay({ onClose }: { onClose: () => void }) {
                         scaleType: q?.scaleType ?? 'LIKERT_5',
                         likertLabels: q?.likertLabels,
                         hasOtherOption: q?.hasOtherOption,
+                        options: q?.options,
                         unit: q?.unit,
                       },
                     ];

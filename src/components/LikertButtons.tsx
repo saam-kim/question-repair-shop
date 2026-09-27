@@ -100,7 +100,9 @@ export function LikertButtons({
                 disabled={disabled}
                 value={otherText}
                 onChange={(e) => handleOtherTextChange(e.target.value)}
-                placeholder="내용을 직접 입력해주세요"
+                maxLength={2000}
+                aria-label="기타를 선택한 이유"
+                placeholder="기타를 선택한 이유나 해당하는 답을 적어주세요"
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-base outline-none focus:border-blue-500"
                 autoFocus
               />

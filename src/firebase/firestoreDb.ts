@@ -26,6 +26,7 @@ import type {
   RevisionReason,
   Assignments,
   ScaleType,
+  AnswerValue,
 } from '../types';
 
 /** Firestore는 필드값으로 undefined를 허용하지 않으므로, 없는 값은 키 자체를 뺀다. */
@@ -42,6 +43,7 @@ export interface QuestionInput {
   scaleType: ScaleType;
   likertLabels?: string[];
   hasOtherOption?: boolean;
+  intentionalFlaw?: boolean;
   unit?: string;
   options?: string[];
 }
@@ -173,6 +175,7 @@ export async function submitQuestions(
       scaleType: q.scaleType,
       likertLabels: q.likertLabels,
       hasOtherOption: q.hasOtherOption,
+      intentionalFlaw: q.intentionalFlaw,
       options: q.options,
       unit: q.unit,
       order: idx + 1,
@@ -191,7 +194,7 @@ export async function submitResponseAndFeedback(
   myTeamId: string,
   targetTeamId: string,
   questionId: QuestionId,
-  value: number | string,
+  value: AnswerValue,
   feedback: { problemTypes: ProblemType[]; comment: string },
 ) {
   const now = Date.now();
