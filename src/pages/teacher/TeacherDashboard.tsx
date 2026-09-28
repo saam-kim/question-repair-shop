@@ -283,7 +283,7 @@ export function TeacherDashboard() {
       <header className="workspace-header">
         <div className="workspace-header-inner">
           <Brand />
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="teacher-controls flex flex-wrap items-center gap-2">
             <span className="mr-2 flex items-center gap-2 text-xs text-slate-500">
               <span className="status-dot text-blue-500" />
               {session.status === 'PAUSED'
@@ -327,7 +327,6 @@ export function TeacherDashboard() {
           </div>
         </div>
       </header>
-      <ConnectionStatus />
       <main className="workspace-main">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -337,11 +336,12 @@ export function TeacherDashboard() {
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">{phaseCopy[1]}</p>
           </div>
+          <ConnectionStatus />
         </div>
         <div className="surface p-4 sm:p-6">
           <PhaseIndicator currentPhase={session.currentPhase} />
         </div>
-        <div className="workspace-stats">
+        <div className="workspace-stats surface">
           <div className="surface stat">
             <p>입장한 조</p>
             <strong>
@@ -400,7 +400,7 @@ export function TeacherDashboard() {
                 type="button"
                 onClick={action.run}
                 disabled={busy || action.disabled || session.status === 'PAUSED'}
-                className="btn-primary"
+                className="btn-primary classroom-next"
               >
                 {busy ? '저장하는 중…' : action.label}
                 <Icon name="arrow" className="h-4 w-4" />

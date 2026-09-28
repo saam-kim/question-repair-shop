@@ -30,10 +30,10 @@ export function TeamProgressTable({
         좌우로 밀어 전체 진행 상황을 확인하세요.
       </p>
       <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="조별 진행 현황 표">
-        <table className="w-full min-w-[560px] text-left text-sm">
+        <table className="progress-table w-full min-w-[560px] text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-slate-500">
-              <th className="py-4 pr-4 text-xs font-medium">조</th>
+              <th className="py-2 pr-4 text-xs font-medium">조</th>
               <th className="py-2 pr-4 font-medium">질문 작성</th>
               <th className="py-2 pr-4 font-medium">응답</th>
               <th className="py-2 pr-4 font-medium">피드백 도착</th>
@@ -47,7 +47,7 @@ export function TeamProgressTable({
               return (
                 <Fragment key={teamId}>
                   <tr className="border-b border-slate-100">
-                    <td className="py-4 pr-4 font-medium text-slate-800">
+                    <td className="py-2 pr-4 font-medium text-slate-800">
                       <button
                         type="button"
                         disabled={!canPeek}
@@ -61,16 +61,16 @@ export function TeamProgressTable({
                         )}
                       </button>
                     </td>
-                    <td className="py-4 pr-4">
+                    <td className="py-2 pr-4">
                       <ProgressBadge state={questionStatus(team)} />
                     </td>
-                    <td className="py-4 pr-4">
+                    <td className="py-2 pr-4">
                       <ProgressBadge state={respondingStatus(team, assignments, teamId)} />
                     </td>
-                    <td className="py-4 pr-4">
+                    <td className="py-2 pr-4">
                       <ProgressBadge state={feedbackReceivedStatus(teamId, assignments, teams)} />
                     </td>
-                    <td className="py-4 pr-4">
+                    <td className="py-2 pr-4">
                       <ProgressBadge state={revisionStatus(team)} />
                     </td>
                   </tr>
@@ -118,3 +118,4 @@ export function TeamProgressTable({
     </div>
   );
 }
+

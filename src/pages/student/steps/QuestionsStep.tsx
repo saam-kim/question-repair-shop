@@ -262,7 +262,7 @@ export function QuestionsStep({
               <Notice>{error}</Notice>
             </div>
           )}
-          <div className="sticky top-0 z-10 mt-5 bg-white/95 py-2 backdrop-blur-sm"><QuestionWritingGuide /></div>
+          <div className="writing-guide-dock sticky top-0 z-10 mt-5 py-2"><QuestionWritingGuide /></div>
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               세 질문 중 <strong>딱 1개</strong>는 유의 사항을 일부러 어겨 만들어보세요. 그 질문에 ‘친구들이 수리할 질문’을 표시해야 제출할 수 있습니다.
           </p>
@@ -270,7 +270,7 @@ export function QuestionsStep({
             {QIDS.map((qid, idx) => {
               const d = drafts[qid];
               return (
-                <Card key={qid} className="flex flex-col p-5">
+                <Card key={qid} className="question-editor flex flex-col p-5">
                   <label htmlFor={qid} className="text-sm font-semibold text-blue-600">
                     질문 {idx + 1}
                   </label>
@@ -294,7 +294,7 @@ export function QuestionsStep({
                   </label>
 
                   <p className="mt-3 text-xs font-semibold text-slate-500">응답 방식</p>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <div className="response-type-picker mt-1.5 flex flex-wrap gap-1.5">
                     {SCALE_TYPES.map((st) => {
                       const selected = d.scaleType === st.id;
                       return (
@@ -304,8 +304,8 @@ export function QuestionsStep({
                           onClick={() => updateDraft(qid, { scaleType: st.id })}
                           title={st.description}
                           aria-pressed={selected}
-                          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors
-                            ${selected ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600 hover:border-blue-300'}`}
+                          className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
+                            ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 text-slate-600 hover:border-blue-300'}`}
                         >
                           {st.label}
                         </button>

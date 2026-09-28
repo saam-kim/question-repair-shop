@@ -5,7 +5,7 @@ export function ConnectionRecoveryButton({ label = '연결 다시 시도' }: { l
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   return <span className="inline-flex flex-wrap items-center gap-2">
-    <button type="button" disabled={busy} className="text-sm font-semibold text-blue-700 underline underline-offset-4 disabled:opacity-50" onClick={async () => {
+    <button type="button" disabled={busy} className="connection-retry" onClick={async () => {
       setBusy(true);
       setFailed(false);
       try { await recoverConnection(); }
@@ -27,7 +27,7 @@ export function ConnectionStatus() {
       window.removeEventListener('offline', update);
     };
   }, []);
-  return <div className={`flex flex-wrap items-center justify-end gap-3 px-5 py-2 text-xs ${online ? 'text-slate-500' : 'bg-amber-50 text-amber-900'}`}>
+  return <div className={`connection-status ${online ? '' : 'connection-status-offline'}`}>
     {!online && <span role="status">인터넷 연결이 끊겼습니다. 연결이 돌아오면 저장과 화면 갱신을 이어갑니다. 이 창을 열어두세요.</span>}
     <ConnectionRecoveryButton label="화면 다시 동기화" />
   </div>;
