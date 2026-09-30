@@ -536,7 +536,8 @@ p {
   }
   .student-shell > .connection-status { padding-top: 0; }
   .workspace-main > div > .connection-status { width: auto; margin: 0 0 0 auto; padding: 0; }
-  .dashboard-preview-tools > .connection-status { width: auto; margin: 0; padding: 0; }
+  .teacher-controls > .connection-status { width: auto; max-width: 100%; margin: 0; padding: 0; }
+  .teacher-controls > .connection-status-offline { width: 100%; border-radius: 0.75rem; padding: 0.5rem 0.75rem; }
   .progress-table th { background: var(--color-slate-50); }
   .progress-table th:first-child { padding-left: 0.75rem; border-radius: 0.5rem 0 0 0; }
   .progress-table th:last-child { border-radius: 0 0.5rem 0 0; }
@@ -629,7 +630,9 @@ p {
   .connection-status { padding-inline: 1rem; }
   .teacher-controls { display: grid; width: 100%; grid-template-columns: 1fr 1fr; }
   .teacher-controls > span { grid-column: 1; grid-row: 1; }
-  .teacher-controls > button:last-child { grid-column: 2; grid-row: 1; justify-self: end; }
+  .teacher-controls > .teacher-end { grid-column: 2; grid-row: 1; justify-self: end; }
+  .teacher-controls > .teacher-preview { grid-column: 1 / -1; grid-row: 2; }
+  .teacher-controls > .connection-status { grid-column: 1 / -1; }
   .teacher-controls .btn-secondary { flex: 1; white-space: nowrap; padding-inline: 0.65rem; }
   .classroom-next { width: 100%; }
   .hero-title { font-size: clamp(2.25rem, 8.5vw, 3.25rem); }

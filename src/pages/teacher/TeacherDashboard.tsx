@@ -301,6 +301,12 @@ export function TeacherDashboard({ rehearsalSessionId }: { rehearsalSessionId?: 
                   ? '수업 종료'
                   : '교사 대시보드'}
             </span>
+            {!rehearsal && (
+              <button type="button" onClick={() => setShowRehearsal(true)} className="teacher-preview btn-secondary border-blue-200 text-blue-700">
+                <Icon name="book" />
+                학생 화면 미리보기 · 리허설
+              </button>
+            )}
             {session.status !== 'ENDED' && (
               <>
                 <button
@@ -328,12 +334,13 @@ export function TeacherDashboard({ rehearsalSessionId }: { rehearsalSessionId?: 
                   type="button"
                   onClick={handleEnd}
                   disabled={busy}
-                  className="rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-rose-50 hover:text-rose-700"
+                  className="teacher-end rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-rose-50 hover:text-rose-700"
                 >
                   수업 종료
                 </button>
               </>
             )}
+            {!rehearsal && <ConnectionStatus />}
           </div>
         </div>
       </header>
@@ -346,13 +353,6 @@ export function TeacherDashboard({ rehearsalSessionId }: { rehearsalSessionId?: 
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">{phaseCopy[1]}</p>
           </div>
-          {!rehearsal && <div className="dashboard-preview-tools ml-auto flex flex-col items-end gap-1">
-            <button type="button" onClick={() => setShowRehearsal(true)} className="btn-secondary border-blue-200 text-blue-700">
-              <Icon name="book" />
-              학생 화면 미리보기 · 리허설
-            </button>
-            <ConnectionStatus />
-          </div>}
         </div>
         <div className="surface p-4 sm:p-6">
           <PhaseIndicator currentPhase={session.currentPhase} />

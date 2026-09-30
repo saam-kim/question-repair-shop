@@ -182,6 +182,9 @@ try {
   await button('질문 만들기 시작').click();
   await page.getByRole('heading', { name: '우리 반의 질문이 만들어지고 있어요' }).waitFor();
   await page.evaluate((teams) => window.classroom.setTeams(teams), seedTeams);
+  assert.equal(await page.locator('.workspace-header').getByRole('button', { name: '학생 화면 미리보기 · 리허설', exact: true }).count(), 1);
+  assert.equal(await page.locator('.workspace-header').getByRole('button', { name: '화면 다시 동기화', exact: true }).count(), 1);
+  assert.equal(await page.locator('.workspace-main').getByRole('button', { name: '학생 화면 미리보기 · 리허설', exact: true }).count(), 0);
   await snapshot('dashboard-mobile');
   await page.setViewportSize({ width: 1440, height: 1000 });
   await snapshot('dashboard-desktop');
