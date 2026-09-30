@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Card } from '../../components/Card';
 import { getProblemTypeInfo } from '../../lib/problemTypes';
 import { REVISION_REASONS } from '../../lib/revisionReasons';
@@ -53,8 +53,7 @@ export function TeacherResults({ teams }: { teams: Record<string, Team> }) {
   const [selectedProblem, setSelectedProblem] = useState<ProblemType | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [selectedCase, setSelectedCase] = useState<string | null>(null);
-  const problem = summary.find((entry) => entry.problemType === selectedProblem);
-  const info = problem ? getProblemTypeInfo(problem.problemType) : null;
+  const panelId = useId();
   const maxCount = summary[0]?.questions.length ?? 1;
   const cases = useMemo(() => Object.entries(teams).sort((a, b) => a[1].teamNumber - b[1].teamNumber)
     .flatMap(([teamId, team]) => QUESTION_IDS.filter((qid) => team.revisions?.[qid]).map((qid) => ({ key: `${teamId}_${qid}`, teamId, team, qid }))), [teams]);
@@ -70,46 +69,55 @@ export function TeacherResults({ teams }: { teams: Record<string, Team> }) {
       </p>
       {!summary.length ? <p className="mt-5 text-sm text-slate-500">현재 문항별 응답 조의 30% 이상이 지적한 유형이 없습니다. 응답이 없는 문항은 집계하지 않습니다.</p>
         : <div className="mt-5 space-y-2">
-          {summary.map((entry) => <button key={entry.problemType} type="button" aria-expanded={selectedProblem === entry.problemType}
-            onClick={() => { setSelectedProblem(selectedProblem === entry.problemType ? null : entry.problemType); setSelectedQuestion(null); }}
-            className={`w-full rounded-xl border p-4 text-left transition-colors ${selectedProblem === entry.problemType ? 'border-blue-300 bg-blue-50' : 'border-slate-100 hover:border-blue-200 hover:bg-slate-50'}`}>
-            <span className="flex items-start justify-between gap-4 text-sm">
-              <span className="font-semibold text-slate-700">{getProblemTypeInfo(entry.problemType).label}</span>
-              <span className="shrink-0 font-semibold text-blue-700">{entry.questions.length}문항</span>
-            </span>
-            <span className="mt-3 block h-1.5 rounded-full bg-slate-100" aria-hidden="true">
-              <span className="block h-1.5 rounded-full bg-blue-500" style={{ width: `${entry.questions.length / maxCount * 100}%` }} />
-            </span>
-          </button>)}
-        </div>}
-      {problem && info && <section className="mt-5 rounded-2xl border border-blue-200 bg-slate-50 p-4 sm:p-5" aria-label="선택한 유형의 문항">
-        <h3 className="text-sm font-semibold text-slate-900">{info.label} · {problem.questions.length}문항</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600">확인할 기준: {info.description}</p>
-        <p className="mt-1 text-xs leading-6 text-slate-500">수리 후에도 이 문제가 남아 있는지, 수정하면서 새로운 문제가 생기지 않았는지 살펴보세요.</p>
-        <div className="mt-4 space-y-3">
-          {problem.questions.map((item) => {
-            const expanded = selectedQuestion === item.key;
-            return <div key={item.key} className="rounded-xl border border-slate-200 bg-white p-4">
-              <button type="button" aria-expanded={expanded} onClick={() => setSelectedQuestion(expanded ? null : item.key)} className="w-full text-left">
-                <span className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <span className="font-semibold text-blue-700">{item.team.teamNumber}조 · {item.team.nickname} Q{item.questionId.slice(1)}</span>
-                  <span className="text-slate-500">{item.responseCount}개 응답 조 중 {item.pointedOutCount}개 조 지적 · {Math.round(item.pointedOutCount / item.responseCount * 100)}%</span>
+          {summary.map((entry) => {
+            const opened = selectedProblem === entry.problemType;
+            const info = getProblemTypeInfo(entry.problemType);
+            const id = `${panelId}-${entry.problemType}`;
+            return <div key={entry.problemType} className={`overflow-hidden rounded-xl border ${opened ? 'border-blue-300' : 'border-slate-100'}`}>
+              <button type="button" aria-expanded={opened} aria-controls={id}
+                onClick={() => { setSelectedProblem(opened ? null : entry.problemType); setSelectedQuestion(null); }}
+                className={`w-full p-4 text-left transition-colors ${opened ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+                <span className="flex items-start justify-between gap-4 text-sm">
+                  <span className="font-semibold text-slate-700">{info.label}</span>
+                  <span className="flex shrink-0 items-center gap-3 font-semibold text-blue-700">
+                    {entry.questions.length}문항
+                    <span aria-hidden="true" className="text-xs">{opened ? '⌃' : '⌄'}</span>
+                  </span>
                 </span>
-                <span className="mt-2 block whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-slate-800">{item.team.questions?.[item.questionId]?.text}</span>
-                <span className="mt-2 block text-xs text-blue-600">{expanded ? '수리 전후 접기 ↑' : '수리 전후 확인 ↓'}</span>
+                <span className="mt-3 block h-1.5 rounded-full bg-slate-100" aria-hidden="true">
+                  <span className="block h-1.5 rounded-full bg-blue-500" style={{ width: `${entry.questions.length / maxCount * 100}%` }} />
+                </span>
               </button>
-              {expanded && <>
-                {item.team.questions?.[item.questionId]?.intentionalFlaw && <p className="mt-3 text-xs text-amber-700">학생들이 ‘친구들이 고쳐 볼 문항’으로 지정한 질문입니다.</p>}
-                {item.comments.length > 0 && <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-                  <p className="font-semibold">이 유형을 지적한 응답 조의 의견</p>
-                  {item.comments.map((comment, i) => <p key={i} className="mt-2 whitespace-pre-wrap break-words leading-6">{comment}</p>)}
-                </div>}
-                <RevisionComparison team={item.team} questionId={item.questionId} />
-              </>}
+              {opened && <section id={id} className="border-t border-blue-100 bg-slate-50 p-4 sm:p-5" aria-label="선택한 유형의 문항">
+                <p className="text-sm leading-6 text-slate-600">확인할 기준: {info.description}</p>
+                <p className="mt-1 text-xs leading-6 text-slate-500">수리 후에도 이 문제가 남아 있는지, 수정하면서 새로운 문제가 생기지 않았는지 살펴보세요.</p>
+                <div className="mt-4 space-y-3">
+                  {entry.questions.map((item) => {
+                    const expanded = selectedQuestion === item.key;
+                    return <div key={item.key} className="rounded-xl border border-slate-200 bg-white p-4">
+                      <button type="button" aria-expanded={expanded} onClick={() => setSelectedQuestion(expanded ? null : item.key)} className="w-full text-left">
+                        <span className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className="font-semibold text-blue-700">{item.team.teamNumber}조 · {item.team.nickname} Q{item.questionId.slice(1)}</span>
+                          <span className="text-slate-500">{item.responseCount}개 응답 조 중 {item.pointedOutCount}개 조 지적 · {Math.round(item.pointedOutCount / item.responseCount * 100)}%</span>
+                        </span>
+                        <span className="mt-2 block whitespace-pre-wrap break-words text-sm font-semibold leading-6 text-slate-800">{item.team.questions?.[item.questionId]?.text}</span>
+                        <span className="mt-2 block text-xs text-blue-600">{expanded ? '수리 전후 접기 ↑' : '수리 전후 확인 ↓'}</span>
+                      </button>
+                      {expanded && <>
+                        {item.team.questions?.[item.questionId]?.intentionalFlaw && <p className="mt-3 text-xs text-amber-700">학생들이 ‘친구들이 고쳐 볼 문항’으로 지정한 질문입니다.</p>}
+                        {item.comments.length > 0 && <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
+                          <p className="font-semibold">이 유형을 지적한 응답 조의 의견</p>
+                          {item.comments.map((comment, i) => <p key={i} className="mt-2 whitespace-pre-wrap break-words leading-6">{comment}</p>)}
+                        </div>}
+                        <RevisionComparison team={item.team} questionId={item.questionId} />
+                      </>}
+                    </div>;
+                  })}
+                </div>
+              </section>}
             </div>;
           })}
-        </div>
-      </section>}
+        </div>}
     </Card>
     <Card className="p-5 sm:p-6">
       <h2 className="text-lg font-bold text-slate-900">질문 수리 사례</h2>

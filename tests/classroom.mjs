@@ -126,6 +126,12 @@ try {
   await rehearsalDashboard.getByRole('heading', { name: '우리 반 질문, 함께 살펴볼 점' }).waitFor();
   await rehearsalDashboard.getByRole('button', { name: '한 문항에 두 가지 이상의 내용을 묻는다 4문항', exact: true }).click();
   const flaggedQuestions = rehearsalDashboard.getByRole('region', { name: '선택한 유형의 문항' });
+  const statistic = rehearsalDashboard.getByRole('button', { name: '한 문항에 두 가지 이상의 내용을 묻는다 4문항', exact: true });
+  assert.equal(await statistic.locator('..').getByRole('region', { name: '선택한 유형의 문항' }).count(), 1);
+  await statistic.click();
+  assert.equal(await flaggedQuestions.count(), 0);
+  assert.equal(await statistic.getAttribute('aria-expanded'), 'false');
+  await statistic.click();
   await flaggedQuestions.getByRole('button', { name: /1조 · 연두 Q2/ }).click();
   await flaggedQuestions.getByText('아직 수리한 질문을 제출하지 않았습니다.', { exact: true }).waitFor();
   await button('질문 수리 시작').click();
