@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAnonAuth } from '../../hooks/useAnonAuth';
 import { useSession } from '../../hooks/useSession';
@@ -28,6 +28,10 @@ import { ClassGuide } from '../../components/ClassGuide';
 import { respondingStatus } from '../../lib/teamStatus';
 import { StudentJoinShareDialog } from '../../components/StudentJoinShareDialog';
 
+const RehearsalOverlay = lazy(() =>
+  import('./RehearsalOverlay').then((m) => ({ default: m.RehearsalOverlay })),
+);
+
 export function TeacherDashboard() {
   const { sessionId = '' } = useParams();
   const navigate = useNavigate();
@@ -35,6 +39,7 @@ export function TeacherDashboard() {
   const { uid, error: authError } = useAnonAuth();
   const { data, loading, error: sessionError } = useSession(uid ? sessionId : null, true, uid);
   const [busy, setBusy] = useState(false);
+  const [showRehearsal, setShowRehearsal] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [showStudentJoinInfo, setShowStudentJoinInfo] = useState(() =>
     Boolean((location.state as { showStudentJoinInfo?: boolean } | null)?.showStudentJoinInfo),
@@ -336,7 +341,13 @@ export function TeacherDashboard() {
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">{phaseCopy[1]}</p>
           </div>
-          <ConnectionStatus />
+          <div className="dashboard-preview-tools ml-auto flex flex-col items-end gap-1">
+            <button type="button" onClick={() => setShowRehearsal(true)} className="btn-secondary border-blue-200 text-blue-700">
+              <Icon name="book" />
+              학생 화면 미리보기 · 리허설
+            </button>
+            <ConnectionStatus />
+          </div>
         </div>
         <div className="surface p-4 sm:p-6">
           <PhaseIndicator currentPhase={session.currentPhase} />
@@ -465,6 +476,11 @@ export function TeacherDashboard() {
           <ClassGuide />
         </div>
       </main>
+      {showRehearsal && (
+        <Suspense fallback={<LoadingScreen />}>
+          <RehearsalOverlay onClose={() => setShowRehearsal(false)} />
+        </Suspense>
+      )}
       {showStudentJoinInfo && session.status !== 'ENDED' && (
         <StudentJoinShareDialog
           studentUrl={studentUrl.toString()}

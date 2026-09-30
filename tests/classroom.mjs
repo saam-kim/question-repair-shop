@@ -139,6 +139,13 @@ try {
   await snapshot('dashboard-mobile');
   await page.setViewportSize({ width: 1440, height: 1000 });
   await snapshot('dashboard-desktop');
+  const beforeDashboardRehearsal = await page.evaluate(() => JSON.stringify(window.classroom.data));
+  await button('학생 화면 미리보기 · 리허설').click();
+  await page.getByRole('heading', { name: '곧 활동이 시작됩니다', exact: true }).waitFor();
+  await button('질문 만들기 시작').click();
+  await page.getByRole('heading', { name: '무엇이 궁금한가요?', exact: true }).waitFor();
+  await button('닫기').click();
+  assert.equal(await page.evaluate(() => JSON.stringify(window.classroom.data)), beforeDashboardRehearsal);
   await page.evaluate(() => {
     window.classroom.failNext = true;
   });

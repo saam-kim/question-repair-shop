@@ -536,6 +536,7 @@ p {
   }
   .student-shell > .connection-status { padding-top: 0; }
   .workspace-main > div > .connection-status { width: auto; margin: 0 0 0 auto; padding: 0; }
+  .dashboard-preview-tools > .connection-status { width: auto; margin: 0; padding: 0; }
   .progress-table th { background: var(--color-slate-50); }
   .progress-table th:first-child { padding-left: 0.75rem; border-radius: 0.5rem 0 0 0; }
   .progress-table th:last-child { border-radius: 0 0.5rem 0 0; }
