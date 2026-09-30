@@ -1,5 +1,5 @@
 import { PROBLEM_TYPES } from './problemTypes';
-import { QUESTION_IDS, type ProblemType, type QuestionId, type Team } from '../types';
+import { QUESTION_IDS, type FeedbackEntry, type ProblemType, type QuestionId, type Team } from '../types';
 
 export interface FlaggedQuestion {
   key: string;
@@ -12,23 +12,35 @@ export interface FlaggedQuestion {
 
 /** Each responding group counts once. Responses without feedback remain in the denominator. */
 export function teacherFeedbackSummary(teams: Record<string, Team>) {
+  const entries = Object.entries(teams);
+  const responses = new Map<string, (FeedbackEntry | undefined)[]>();
+  for (const [reviewerId, reviewer] of entries) {
+    for (const [teamId, byQuestion] of Object.entries(reviewer.responsesGiven ?? {})) {
+      if (reviewerId === teamId || !teams[teamId]) continue;
+      for (const questionId of QUESTION_IDS) {
+        if (!byQuestion[questionId] || !teams[teamId].questions?.[questionId]) continue;
+        const key = `${teamId}_${questionId}`;
+        const feedback = responses.get(key) ?? [];
+        feedback.push(reviewer.feedbackGiven?.[teamId]?.[questionId]);
+        responses.set(key, feedback);
+      }
+    }
+  }
+  const sortedTeams = entries.sort((a, b) => a[1].teamNumber - b[1].teamNumber);
   return PROBLEM_TYPES.filter((type) => type.id !== 'NONE').map((type) => {
     const questions: FlaggedQuestion[] = [];
-    for (const [teamId, team] of Object.entries(teams).sort((a, b) => a[1].teamNumber - b[1].teamNumber)) {
+    for (const [teamId, team] of sortedTeams) {
       for (const questionId of QUESTION_IDS) {
         if (!team.questions?.[questionId]) continue;
-        const respondents = Object.entries(teams).filter(([id, reviewer]) =>
-          id !== teamId && reviewer.responsesGiven?.[teamId]?.[questionId] !== undefined,
-        );
-        const pointedOut = respondents.filter(([, reviewer]) =>
-          reviewer.feedbackGiven?.[teamId]?.[questionId]?.problemTypes.includes(type.id),
-        );
+        const key = `${teamId}_${questionId}`;
+        const respondents = responses.get(key) ?? [];
+        const pointedOut = respondents.filter((entry): entry is FeedbackEntry => Boolean(entry?.problemTypes.includes(type.id)));
         // Integer comparison preserves the exact inclusive 30% boundary.
         if (!respondents.length || pointedOut.length * 10 < respondents.length * 3) continue;
         questions.push({
-          key: `${teamId}_${questionId}`, team, questionId,
+          key, team, questionId,
           responseCount: respondents.length, pointedOutCount: pointedOut.length,
-          comments: pointedOut.map(([, reviewer]) => reviewer.feedbackGiven?.[teamId]?.[questionId]?.comment ?? '').filter(Boolean),
+          comments: pointedOut.map((entry) => entry.comment).filter(Boolean),
         });
       }
     }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { collection, getDocsFromServer, onSnapshot, runTransaction } from 'firebase/firestore';
 import { getRehearsal, isRehearsal, subscribeRehearsal } from '../lib/rehearsalStore';
 import { getDb, sessionDocRef } from '../firebase/db';
@@ -163,7 +163,7 @@ export function useSession(sessionId: string | null, includeTeams = true, teache
     };
   }, [sessionId, includeTeams, teacherUid]);
 
-  const data: SessionData | null = sessionId && session
-    ? { session, teams, assignments: session.assignments ?? {} } : null;
+  const data = useMemo<SessionData | null>(() => sessionId && session
+    ? { session, teams, assignments: session.assignments ?? {} } : null, [sessionId, session, teams]);
   return { data, loading: Boolean(sessionId) && (!sessionLoaded || !teamsLoaded), error };
 }

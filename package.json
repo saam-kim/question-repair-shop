@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "node tests/yes-no.mjs && node tests/classroom.mjs && node tests/export.mjs && node tests/teacher-feedback.mjs && node tests/network.mjs",
+    "test": "node tests/cleanup.mjs && node tests/yes-no.mjs && node tests/classroom.mjs && node tests/export.mjs && node tests/teacher-feedback.mjs && node tests/network.mjs",
     "preview": "vite preview",
     "test:emulators": "firebase emulators:exec --only firestore,auth --project demo-question-repair \"node tests/security.mjs && node tests/emulator-browser.mjs\""
   },

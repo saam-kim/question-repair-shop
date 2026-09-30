@@ -11,20 +11,8 @@ import { REVISION_REASONS } from '../../../lib/revisionReasons';
 import { DEFAULT_LIKERT_LABELS } from '../../../lib/likertScale';
 import { SCALE_TYPES } from '../../../lib/scaleTypes';
 import { QuestionResponseSummary } from '../../../components/QuestionResponseSummary';
-import type { QuestionId, RevisionReason, ScaleType, Team } from '../../../types';
-
-const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
-
-interface RevisionDraft {
-  text: string;
-  scaleType: ScaleType;
-  isCustomLikert: boolean;
-  likertLabels: string[];
-  hasOtherOption: boolean;
-  options: string[];
-  unit: string;
-  reasons: RevisionReason[];
-}
+import { QUESTION_IDS, type QuestionId, type RevisionReason, type Team } from '../../../types';
+import { isDraftValid, isRevisionDraftRecord, questionInputFromDraft, type RevisionDraft } from '../../../lib/questionDraft';
 
 function draftFromQuestion(team: Team, qid: QuestionId): RevisionDraft {
   const q = team.questions?.[qid];
@@ -40,15 +28,6 @@ function draftFromQuestion(team: Team, qid: QuestionId): RevisionDraft {
     unit: q?.unit ?? '',
     reasons: [],
   };
-}
-
-function isDraftValid(d: RevisionDraft): boolean {
-  if (!d.text.trim()) return false;
-  if (d.scaleType === 'MULTI_SELECT' && (d.options.length < 2 || d.options.length > 5 || d.options.some((o) => !o.trim()) || new Set(d.options.map((o) => o.trim())).size !== d.options.length)) return false;
-  if (d.scaleType === 'LIKERT_5' && d.isCustomLikert) {
-    return d.likertLabels.every((l) => l.trim().length > 0);
-  }
-  return true;
 }
 
 export function RevisionStep({
@@ -69,6 +48,7 @@ export function RevisionStep({
       q2: draftFromQuestion(myTeam, 'q2'),
       q3: draftFromQuestion(myTeam, 'q3'),
     }),
+    isRevisionDraftRecord,
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +85,7 @@ export function RevisionStep({
     }));
   }
 
-  const allFilled = QIDS.every((qid) => isDraftValid(drafts[qid]));
+  const allFilled = QUESTION_IDS.every((qid) => isDraftValid(drafts[qid]));
 
   async function handleSubmit() {
     setError(null);
@@ -115,22 +95,16 @@ export function RevisionStep({
         sessionId,
         teamId,
         Object.fromEntries(
-          QIDS.map((qid) => {
+          QUESTION_IDS.map((qid) => {
             const d = drafts[qid];
+            const { text: revisedText, ...format } = questionInputFromDraft(d);
             return [
               qid,
               {
                 originalText: myTeam.questions?.[qid]?.text ?? '',
-                revisedText: d.text.trim(),
+                revisedText,
                 revisionReasons: d.reasons,
-                scaleType: d.scaleType,
-                likertLabels:
-                  d.scaleType === 'LIKERT_5' && d.isCustomLikert
-                    ? d.likertLabels.map((l) => l.trim())
-                    : undefined,
-                hasOtherOption: ['LIKERT_5', 'MULTI_SELECT'].includes(d.scaleType) ? d.hasOtherOption : undefined,
-                options: d.scaleType === 'MULTI_SELECT' ? d.options.map((o) => o.trim()) : undefined,
-                unit: d.scaleType === 'SHORT_ANSWER' && d.unit.trim() ? d.unit.trim() : undefined,
+                ...format,
               },
             ];
           }),
@@ -159,7 +133,7 @@ export function RevisionStep({
             </div>
           )}
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
-            {QIDS.map((qid, idx) => {
+            {QUESTION_IDS.map((qid, idx) => {
               const d = drafts[qid];
               const original = myTeam.questions?.[qid]?.text ?? '';
               const unchanged = d.text.trim() === original.trim();

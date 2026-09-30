@@ -3,9 +3,7 @@ import { Card } from '../../../components/Card';
 import { getFeedbackForQuestion, countProblemTypes } from '../../../lib/feedbackUtils';
 import { getProblemTypeInfo } from '../../../lib/problemTypes';
 import { REVISION_REASONS } from '../../../lib/revisionReasons';
-import type { ProblemType, QuestionId, Team } from '../../../types';
-
-const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
+import { QUESTION_IDS, type ProblemType, type Team } from '../../../types';
 
 export function DoneStep({
   myTeam,
@@ -17,7 +15,7 @@ export function DoneStep({
   allTeams: Record<string, Team>;
 }) {
   const overallCounts: Partial<Record<ProblemType, number>> = {};
-  QIDS.forEach((qid) => {
+  QUESTION_IDS.forEach((qid) => {
     const counts = countProblemTypes(getFeedbackForQuestion(allTeams, teamId, qid));
     (Object.keys(counts) as ProblemType[]).forEach((pt) => {
       overallCounts[pt] = (overallCounts[pt] ?? 0) + (counts[pt] ?? 0);
@@ -50,7 +48,7 @@ export function DoneStep({
         )}
 
         <div className="mt-6 space-y-4">
-          {QIDS.map((qid, idx) => {
+          {QUESTION_IDS.map((qid, idx) => {
             const revision = myTeam.revisions?.[qid];
             if (!revision) return null;
             return (

@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { ProgressBadge } from './ProgressBadge';
 import {
   questionStatus,
@@ -8,6 +8,7 @@ import {
 } from '../lib/teamStatus';
 import { getScaleTypeInfo } from '../lib/scaleTypes';
 import { QUESTION_IDS } from '../types';
+import { invertAssignments } from '../lib/assignmentAlgorithm';
 import type { Assignments, Team } from '../types';
 
 export function TeamProgressTable({
@@ -19,6 +20,7 @@ export function TeamProgressTable({
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const sorted = Object.entries(teams).sort((a, b) => a[1].teamNumber - b[1].teamNumber);
+  const reviewers = useMemo(() => invertAssignments(assignments), [assignments]);
 
   if (sorted.length === 0) {
     return <p className="py-8 text-center text-slate-400">아직 입장한 조가 없습니다.</p>;
@@ -68,7 +70,7 @@ export function TeamProgressTable({
                       <ProgressBadge state={respondingStatus(team, assignments, teamId)} />
                     </td>
                     <td className="py-2 pr-4">
-                      <ProgressBadge state={feedbackReceivedStatus(teamId, assignments, teams)} />
+                      <ProgressBadge state={feedbackReceivedStatus(teamId, assignments, teams, reviewers)} />
                     </td>
                     <td className="py-2 pr-4">
                       <ProgressBadge state={revisionStatus(team)} />

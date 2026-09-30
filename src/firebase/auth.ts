@@ -16,7 +16,8 @@ export function getAuthInstance(): Auth {
   return authInstance;
 }
 export function getInitialUser(): User | null {
-  return getAuthInstance().currentUser;
+  // Initialization failures belong to ensureAnonAuth's error path, not React rendering.
+  return authInstance?.currentUser ?? null;
 }
 let anonAuthPromise: Promise<User> | null = null;
 export function ensureAnonAuth(): Promise<User> {

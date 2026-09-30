@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 export function MultiSelectButtons({
   value,
   options,
@@ -12,7 +10,7 @@ export function MultiSelectButtons({
   onChange: (value: string[]) => void;
 }) {
   const other = value.find((v) => v === '기타' || v.startsWith('기타: '));
-  const [otherText, setOtherText] = useState(() => other?.startsWith('기타: ') ? other.slice(4) : '');
+  const otherText = other?.startsWith('기타: ') ? other.slice(4) : '';
   function toggle(option: string) {
     onChange(value.includes(option) ? value.filter((v) => v !== option) : [...value, option]);
   }
@@ -30,7 +28,7 @@ export function MultiSelectButtons({
           <label className="flex cursor-pointer items-center gap-4 text-lg text-slate-700">
             <input type="checkbox" checked={Boolean(other)} onChange={() => {
               if (other) onChange(value.filter((v) => v !== other));
-              else onChange([...value, otherText.trim() ? `기타: ${otherText.trim()}` : '기타']);
+              else onChange([...value, '기타']);
             }} className="h-5 w-5 accent-blue-600" />
             기타 (직접 작성)
           </label>
@@ -40,8 +38,7 @@ export function MultiSelectButtons({
             value={otherText}
             onChange={(e) => {
               const text = e.target.value;
-              setOtherText(text);
-              onChange([...value.filter((v) => v !== other), text.trim() ? `기타: ${text.trim()}` : '기타']);
+              onChange([...value.filter((v) => v !== other), `기타: ${text}`]);
             }}
             placeholder="해당하는 다른 답이나 이유를 적어주세요"
             className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-base outline-none focus:border-blue-500"

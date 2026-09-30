@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { getLikertLabels, LIKERT_VALUES } from '../lib/likertScale';
 
 interface LikertButtonsProps {
@@ -18,30 +17,15 @@ export function LikertButtons({
 }: LikertButtonsProps) {
   const labels = getLikertLabels(customLabels);
   const isOther = typeof value === 'string' && (value === '기타' || value.startsWith('기타:'));
-  const [otherText, setOtherText] = useState(() => {
-    if (typeof value === 'string' && value.startsWith('기타: ')) {
-      return value.replace('기타: ', '');
-    }
-    return '';
-  });
-
-  useEffect(() => {
-    if (typeof value === 'string' && value.startsWith('기타: ')) {
-      setOtherText(value.replace('기타: ', ''));
-    } else if (!isOther) {
-      setOtherText('');
-    }
-  }, [value, isOther]);
+  const otherText = typeof value === 'string' && value.startsWith('기타: ') ? value.slice(4) : '';
 
   function handleOtherClick() {
     if (disabled) return;
-    const nextVal = otherText.trim() ? `기타: ${otherText.trim()}` : '기타';
-    onChange(nextVal);
+    onChange(isOther ? value as string : '기타');
   }
 
   function handleOtherTextChange(text: string) {
-    setOtherText(text);
-    onChange(text.trim() ? `기타: ${text.trim()}` : '기타');
+    onChange(`기타: ${text}`);
   }
 
   return (

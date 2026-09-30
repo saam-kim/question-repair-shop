@@ -56,8 +56,8 @@ export function TeacherResults({ teams }: { teams: Record<string, Team> }) {
   const problem = summary.find((entry) => entry.problemType === selectedProblem);
   const info = problem ? getProblemTypeInfo(problem.problemType) : null;
   const maxCount = summary[0]?.questions.length ?? 1;
-  const cases = Object.entries(teams).sort((a, b) => a[1].teamNumber - b[1].teamNumber)
-    .flatMap(([teamId, team]) => QUESTION_IDS.filter((qid) => team.revisions?.[qid]).map((qid) => ({ key: `${teamId}_${qid}`, teamId, team, qid })));
+  const cases = useMemo(() => Object.entries(teams).sort((a, b) => a[1].teamNumber - b[1].teamNumber)
+    .flatMap(([teamId, team]) => QUESTION_IDS.filter((qid) => team.revisions?.[qid]).map((qid) => ({ key: `${teamId}_${qid}`, teamId, team, qid }))), [teams]);
   const currentCase = cases.find((item) => item.key === selectedCase) ?? cases[0];
 
   return <div className="mt-6 space-y-6">

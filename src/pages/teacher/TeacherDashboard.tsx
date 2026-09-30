@@ -15,7 +15,6 @@ import {
   writeAssignments,
   deleteSession,
 } from '../../firebase/db';
-import { downloadClassroom, downloadClassroomHTML } from '../../lib/exportClassroom';
 import { TeacherResults } from './TeacherResults';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Brand } from '../../components/Brand';
@@ -37,6 +36,10 @@ export function TeacherDashboard({ rehearsalSessionId }: { rehearsalSessionId?: 
   const { sessionId: routeSessionId = '' } = useParams();
   const rehearsal = Boolean(rehearsalSessionId && isRehearsal(rehearsalSessionId));
   const sessionId = rehearsal ? rehearsalSessionId! : routeSessionId;
+  return <TeacherDashboardSession key={sessionId} sessionId={sessionId} rehearsal={rehearsal} />;
+}
+
+function TeacherDashboardSession({ sessionId, rehearsal }: { sessionId: string; rehearsal: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { uid, error: authError } = useAnonAuth();
@@ -48,9 +51,10 @@ export function TeacherDashboard({ rehearsalSessionId }: { rehearsalSessionId?: 
     !rehearsal && Boolean((location.state as { showStudentJoinInfo?: boolean } | null)?.showStudentJoinInfo),
   );
 
+  const ownerUid = data?.session.teacherUid;
   useEffect(() => {
-    if (!rehearsal && belongsToThisBrowser(data?.session.teacherUid, uid)) teacherStorage.write({ sessionId });
-  }, [data, sessionId, uid, rehearsal]);
+    if (!rehearsal && belongsToThisBrowser(ownerUid, uid)) teacherStorage.write({ sessionId });
+  }, [ownerUid, sessionId, uid, rehearsal]);
 
   if ((!rehearsal && authError) || sessionError)
     return (
@@ -230,6 +234,17 @@ export function TeacherDashboard({ rehearsalSessionId }: { rehearsalSessionId?: 
       setAssignError('기록을 삭제하지 못했습니다. 다시 시도해주세요.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleDownload(format: 'html' | 'csv') {
+    setAssignError(null);
+    try {
+      const exports = await import('../../lib/exportClassroom');
+      if (format === 'html') exports.downloadClassroomHTML(data!);
+      else exports.downloadClassroom(data!);
+    } catch {
+      setAssignError('결과 파일을 준비하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.');
     }
   }
 
@@ -452,7 +467,7 @@ export function TeacherDashboard({ rehearsalSessionId }: { rehearsalSessionId?: 
           <div className="flex flex-wrap gap-3">
             <button
               className="btn-secondary"
-              onClick={() => downloadClassroomHTML(data)}
+              onClick={() => handleDownload('html')}
               disabled={!teamEntries.length}
             >
               <Icon name="download" className="h-4 w-4" />
@@ -460,7 +475,7 @@ export function TeacherDashboard({ rehearsalSessionId }: { rehearsalSessionId?: 
             </button>
             <button
               className="btn-secondary"
-              onClick={() => downloadClassroom(data)}
+              onClick={() => handleDownload('csv')}
               disabled={!teamEntries.length}
             >
               <Icon name="download" className="h-4 w-4" />

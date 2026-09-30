@@ -6,9 +6,7 @@ import {
   splitByProblem,
   summarizeProblemTypes,
 } from '../../../lib/feedbackUtils';
-import type { QuestionId, Team } from '../../../types';
-
-const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
+import { QUESTION_IDS, type Team } from '../../../types';
 
 export function FeedbackReceivedStep({
   myTeam,
@@ -26,7 +24,7 @@ export function FeedbackReceivedStep({
         <p className="mt-1 text-slate-500">다른 조가 우리 질문에 응답하며 남긴 피드백입니다.</p>
 
         <div className="mt-5 space-y-5">
-          {QIDS.map((qid, idx) => {
+          {QUESTION_IDS.map((qid, idx) => {
             const entries = getFeedbackForQuestion(allTeams, teamId, qid);
             const { noProblem, issues: issueEntries } = splitByProblem(entries);
             const issueSummary = summarizeProblemTypes(entries);
@@ -42,7 +40,7 @@ export function FeedbackReceivedStep({
 
                 <div className="mt-3 flex flex-wrap gap-2 text-sm">
                   <span className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">
-                    문제 없음: {noProblem.length}명
+                    문제 없음: {noProblem.length}개 조
                   </span>
                   {issueSummary.map(({ type, count }) => {
                     const info = getProblemTypeInfo(type);
@@ -54,7 +52,7 @@ export function FeedbackReceivedStep({
                       >
                         <span className="status-dot mr-1" aria-hidden="true" />{' '}
                         {info.requiredRuleLabel ?? info.label}
-                        {count > 1 ? ` · ${count}명` : ''}
+                        {count > 1 ? ` · ${count}개 조` : ''}
                       </span>
                     );
                   })}

@@ -135,10 +135,22 @@ try {
   await multi.getByRole('checkbox', { name: '운동' }).check();
   await multi.getByRole('checkbox', { name: '기타 (직접 작성)' }).check();
   assert.equal(await button('다음').isDisabled(), true);
-  await page.getByRole('textbox', { name: '기타를 선택한 이유' }).fill('그림 그리기');
+  await page.getByRole('textbox', { name: '기타를 선택한 이유' }).pressSequentially('그림 그리기');
   await button('다음').click();
   await button('다음 질문 →').click();
   assert.deepEqual((await calls('response')).at(-1).args[4], ['독서', '운동', '기타: 그림 그리기']);
+  const restored = await browser.newPage();
+  await restored.goto(`http://127.0.0.1:${server.httpServer.address().port}/__test`);
+  await restored.locator('textarea').nth(0).fill('선택지 개수가 달라도 복원할 질문');
+  await restored.getByRole('button', { name: '복수 선택', exact: true }).nth(0).click();
+  await restored.getByRole('button', { name: '+ 선택지 추가', exact: true }).click();
+  for (const [i, value] of ['독서', '운동', '음악', '그림'].entries()) {
+    await restored.getByRole('textbox', { name: `질문 1 선택지 ${i + 1}` }).fill(value);
+  }
+  await restored.reload();
+  assert.equal(await restored.getByRole('textbox', { name: '질문 1 선택지 4' }).inputValue(), '그림');
+  assert.equal(await restored.locator('textarea').nth(0).inputValue(), '선택지 개수가 달라도 복원할 질문');
+  await restored.close();
   assert.deepEqual(errors, []);
   console.log('PASS: binary question creation, preview, answer selection/storage, mixed types, revisions, rehearsal and results');
 } finally {

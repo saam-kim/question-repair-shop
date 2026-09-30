@@ -8,20 +8,8 @@ import { BottomActionBar } from '../../../components/BottomActionBar';
 import { DEFAULT_LIKERT_LABELS, getLikertLabels } from '../../../lib/likertScale';
 import { SCALE_TYPES } from '../../../lib/scaleTypes';
 import { QuestionWritingGuide } from '../../../components/QuestionWritingGuide';
-import type { QuestionId, ScaleType } from '../../../types';
-
-const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
-
-interface QuestionDraft {
-  text: string;
-  scaleType: ScaleType;
-  isCustomLikert: boolean;
-  likertLabels: string[];
-  hasOtherOption: boolean;
-  intentionalFlaw: boolean;
-  options: string[];
-  unit: string;
-}
+import { QUESTION_IDS, type QuestionId } from '../../../types';
+import { isDraftValid, isQuestionDraftRecord, questionInputFromDraft, type QuestionDraft } from '../../../lib/questionDraft';
 
 function emptyDraft(): QuestionDraft {
   return {
@@ -34,19 +22,6 @@ function emptyDraft(): QuestionDraft {
     options: ['', '', ''],
     unit: '',
   };
-}
-
-function isDraftValid(d: QuestionDraft): boolean {
-  if (!d.text.trim()) return false;
-  if (d.scaleType === 'MULTI_SELECT') {
-    const options = d.options ?? [];
-    if (options.length < 2 || options.length > 5 || options.some((o) => !o.trim())) return false;
-    if (new Set(options.map((o) => o.trim())).size !== options.length) return false;
-  }
-  if (d.scaleType === 'LIKERT_5' && d.isCustomLikert) {
-    return d.likertLabels.every((l) => l.trim().length > 0);
-  }
-  return true;
 }
 
 export function QuestionsStep({
@@ -65,13 +40,14 @@ export function QuestionsStep({
       q2: emptyDraft(),
       q3: emptyDraft(),
     }),
+    isQuestionDraftRecord,
   );
   const [reviewing, setReviewing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const flawCount = QIDS.filter((qid) => drafts[qid].intentionalFlaw).length;
-  const allFilled = flawCount === 1 && QIDS.every((qid) => isDraftValid(drafts[qid]));
+  const flawCount = QUESTION_IDS.filter((qid) => drafts[qid].intentionalFlaw).length;
+  const allFilled = flawCount === 1 && QUESTION_IDS.every((qid) => isDraftValid(drafts[qid]));
 
   function updateDraft(qid: QuestionId, patch: Partial<QuestionDraft>) {
     setDrafts((prev) => ({ ...prev, [qid]: { ...prev[qid], ...patch } }));
@@ -87,7 +63,7 @@ export function QuestionsStep({
 
   function selectFlawedQuestion(qid: QuestionId) {
     setDrafts((prev) => Object.fromEntries(
-      QIDS.map((id) => [id, { ...prev[id], intentionalFlaw: id === qid }]),
+      QUESTION_IDS.map((id) => [id, { ...prev[id], intentionalFlaw: id === qid }]),
     ) as Record<QuestionId, QuestionDraft>);
   }
 
@@ -107,21 +83,13 @@ export function QuestionsStep({
         sessionId,
         teamId,
         Object.fromEntries(
-          QIDS.map((qid) => {
+          QUESTION_IDS.map((qid) => {
             const d = drafts[qid];
             return [
               qid,
               {
-                text: d.text.trim(),
-                scaleType: d.scaleType,
-                likertLabels:
-                  d.scaleType === 'LIKERT_5' && d.isCustomLikert
-                    ? d.likertLabels.map((l) => l.trim())
-                    : undefined,
-                hasOtherOption: ['LIKERT_5', 'MULTI_SELECT'].includes(d.scaleType) ? d.hasOtherOption : undefined,
+                ...questionInputFromDraft(d),
                 intentionalFlaw: Boolean(d.intentionalFlaw),
-                options: d.scaleType === 'MULTI_SELECT' ? d.options.map((o) => o.trim()) : undefined,
-                unit: d.scaleType === 'SHORT_ANSWER' && d.unit.trim() ? d.unit.trim() : undefined,
               },
             ];
           }),
@@ -155,7 +123,7 @@ export function QuestionsStep({
               <p className="mt-1 text-lg font-semibold text-slate-900">{topic}</p>
 
               <div className="mt-5 space-y-4">
-                {QIDS.map((qid, idx) => {
+                {QUESTION_IDS.map((qid, idx) => {
                   const d = drafts[qid];
                   const scaleInfo = SCALE_TYPES.find((s) => s.id === d.scaleType);
                   const labels = getLikertLabels(d.isCustomLikert ? d.likertLabels : undefined);
@@ -267,7 +235,7 @@ export function QuestionsStep({
               세 질문 중 <strong>딱 1개</strong>는 유의 사항을 일부러 어겨 만들어보세요. 그 질문에 ‘친구들이 수리할 질문’을 표시해야 제출할 수 있습니다.
           </p>
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
-            {QIDS.map((qid, idx) => {
+            {QUESTION_IDS.map((qid, idx) => {
               const d = drafts[qid];
               return (
                 <Card key={qid} className="question-editor flex flex-col p-5">

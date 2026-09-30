@@ -12,8 +12,12 @@ import { SlowRequestHint } from '../../components/SlowRequestHint';
 import { withConnectionRecovery } from '../../lib/connectionRecovery';
 
 export function StudentJoin() {
-  const navigate = useNavigate();
   const { shortcutCode } = useParams();
+  return <StudentJoinForm key={shortcutCode ?? 'manual'} shortcutCode={shortcutCode} />;
+}
+
+function StudentJoinForm({ shortcutCode }: { shortcutCode?: string }) {
+  const navigate = useNavigate();
   const { uid, loading: authLoading, error: authError, retry: retryAuth } = useAnonAuth();
   const isShortcutCode = /^\d{6}$/.test(shortcutCode ?? '');
   const [code, setCode] = useState(() => (isShortcutCode ? shortcutCode ?? '' : ''));
@@ -33,16 +37,19 @@ export function StudentJoin() {
       setCheckingResume(false);
       return;
     }
+    let cancelled = false;
     withConnectionRecovery(getDoc(sessionDocRef(stored.sessionId)))
       .then((snap) => {
+        if (cancelled) return;
         if (snap.exists() && snap.data().schemaVersion === 2 && snap.data().status !== 'ENDED') {
           setResumeInfo({ sessionId: stored.sessionId });
         } else {
           studentStorage.clear();
         }
       })
-      .catch(() => setError('이전 수업을 확인하지 못했습니다. 코드를 입력해 다시 입장해주세요.'))
-      .finally(() => setCheckingResume(false));
+      .catch(() => { if (!cancelled) setError('이전 수업을 확인하지 못했습니다. 코드를 입력해 다시 입장해주세요.'); })
+      .finally(() => { if (!cancelled) setCheckingResume(false); });
+    return () => { cancelled = true; };
   }, [isShortcutCode, uid]);
 
   const joinWithCode = useCallback(async (codeToJoin: string) => {

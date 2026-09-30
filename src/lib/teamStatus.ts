@@ -23,8 +23,9 @@ export function feedbackReceivedStatus(
   teamId: string,
   assignments: Assignments,
   allTeams: Record<string, Team>,
+  reviewersByTeam = invertAssignments(assignments),
 ): ProgressState {
-  const reviewers = invertAssignments(assignments)[teamId];
+  const reviewers = reviewersByTeam[teamId];
   if (!reviewers || reviewers.length === 0) return 'WAITING';
   const doneCount = reviewers.filter((r) => allTeams[r]?.respondingProgress?.[teamId] === 'DONE').length;
   if (doneCount === reviewers.length) return 'DONE';

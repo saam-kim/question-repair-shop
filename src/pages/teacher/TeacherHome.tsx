@@ -43,6 +43,7 @@ export function TeacherHome() {
     }
     withConnectionRecovery(getDoc(sessionDocRef(stored.sessionId)))
       .then((snap) => {
+        if (cancelled) return;
         const session = snap.data();
         if (
           snap.exists() &&
@@ -55,10 +56,10 @@ export function TeacherHome() {
           teacherStorage.clear();
         }
       })
-      .catch(() =>
-        setError('기존 수업을 확인하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.'),
-      )
-      .finally(() => setCheckingResume(false));
+      .catch(() => {
+        if (!cancelled) setError('기존 수업을 확인하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.');
+      })
+      .finally(() => { if (!cancelled) setCheckingResume(false); });
     return () => {
       cancelled = true;
     };

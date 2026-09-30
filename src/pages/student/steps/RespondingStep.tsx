@@ -12,9 +12,7 @@ import { BottomActionBar } from '../../../components/BottomActionBar';
 import { Card } from '../../../components/Card';
 import { getApplicableProblemTypes } from '../../../lib/problemTypes';
 import { formatLikertResponse } from '../../../lib/likertScale';
-import type { AnswerValue, ProblemType, QuestionId, Team } from '../../../types';
-
-const QIDS: QuestionId[] = ['q1', 'q2', 'q3'];
+import { QUESTION_IDS, type AnswerValue, type ProblemType, type Team } from '../../../types';
 
 interface RespondingProps {
   sessionId: string;
@@ -43,7 +41,7 @@ function validDraft(value: unknown): value is AnswerDraft {
   );
 }
 export function RespondingStep(props: RespondingProps) {
-  const firstMissing = QIDS.findIndex(
+  const firstMissing = QUESTION_IDS.findIndex(
     (q) =>
       !props.myTeam?.responsesGiven?.[props.targetTeamId]?.[q] ||
       !props.myTeam?.feedbackGiven?.[props.targetTeamId]?.[q],
@@ -82,10 +80,10 @@ export function RespondingStep(props: RespondingProps) {
       </div>
     );
   }
-  const qIndex = Math.min(index, QIDS.length - 1);
+  const qIndex = Math.min(index, QUESTION_IDS.length - 1);
   return (
     <RespondingQuestion
-      key={props.targetTeamId + QIDS[qIndex]}
+      key={props.targetTeamId + QUESTION_IDS[qIndex]}
       {...props}
       qIndex={qIndex}
       onNext={() => setIndex(qIndex + 1)}
@@ -106,12 +104,12 @@ function RespondingQuestion({
   myTeam,
 }: RespondingProps & { qIndex: number; onNext: () => void; onPrevious: () => void }) {
   const [draft, setDraft, clearDraft] = useLocalDraft<AnswerDraft>(
-    `${sessionId}_${teamId}_response_${targetTeamId}_${QIDS[qIndex]}`,
+    `${sessionId}_${teamId}_response_${targetTeamId}_${QUESTION_IDS[qIndex]}`,
     () => ({
       stage: 'ANSWER',
-      value: myTeam?.responsesGiven?.[targetTeamId]?.[QIDS[qIndex]]?.value ?? null,
-      problemTypes: myTeam?.feedbackGiven?.[targetTeamId]?.[QIDS[qIndex]]?.problemTypes ?? [],
-      comment: myTeam?.feedbackGiven?.[targetTeamId]?.[QIDS[qIndex]]?.comment ?? '',
+      value: myTeam?.responsesGiven?.[targetTeamId]?.[QUESTION_IDS[qIndex]]?.value ?? null,
+      problemTypes: myTeam?.feedbackGiven?.[targetTeamId]?.[QUESTION_IDS[qIndex]]?.problemTypes ?? [],
+      comment: myTeam?.feedbackGiven?.[targetTeamId]?.[QUESTION_IDS[qIndex]]?.comment ?? '',
     }),
     validDraft,
   );
@@ -122,7 +120,7 @@ function RespondingQuestion({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const qid = QIDS[qIndex];
+  const qid = QUESTION_IDS[qIndex];
   const question = targetTeam?.questions?.[qid];
   const questionText = question?.text ?? '';
   const scaleType = question?.scaleType ?? 'LIKERT_5';
@@ -148,7 +146,7 @@ function RespondingQuestion({
         problemTypes: problemTypes.length ? problemTypes : ['NONE'],
         comment: comment.trim(),
       });
-      if (qIndex < QIDS.length - 1) {
+      if (qIndex < QUESTION_IDS.length - 1) {
         clearDraft();
         onNext();
       } else {
@@ -307,7 +305,7 @@ function RespondingQuestion({
           ? '다음'
           : saving
             ? '저장하는 중...'
-            : qIndex < QIDS.length - 1
+            : qIndex < QUESTION_IDS.length - 1
               ? '다음 질문 →'
               : '응답 완료'}
       </BottomActionBar>

@@ -13,12 +13,12 @@ export function publishConfirmedUpdate(update: ConfirmedUpdate) {
 }
 /** Firestore updateDoc patches may contain dotted field paths. Preserve sibling answers. */
 export function applyConfirmedPatch<T extends object>(original: T, patch: Record<string, unknown>): T {
-  const result = structuredClone(original) as Record<string, unknown>;
+  const result = { ...original } as Record<string, unknown>;
   for (const [path, value] of Object.entries(patch)) {
     const keys = path.split('.');
     let target = result;
     for (const key of keys.slice(0, -1)) {
-      target[key] ??= {};
+      target[key] = { ...(target[key] as Record<string, unknown> | undefined) };
       target = target[key] as Record<string, unknown>;
     }
     target[keys[keys.length - 1]] = value;
