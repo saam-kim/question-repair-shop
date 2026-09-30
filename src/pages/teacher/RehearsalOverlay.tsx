@@ -21,6 +21,7 @@ import {
   sampleFeedbackForQuestion,
 } from '../../lib/rehearsalSampleData';
 import { PreviewPane } from './PreviewPane';
+import { TeacherDashboard } from './TeacherDashboard';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { PhaseIndicator } from '../../components/PhaseIndicator';
 import { QUESTION_IDS } from '../../types';
@@ -38,6 +39,7 @@ export function RehearsalOverlay({ onClose }: { onClose: () => void }) {
   const [sessionId, setSessionId] = useState(createRehearsal);
   const { data } = useSession(sessionId);
   const [activeSlot, setActiveSlot] = useState(1);
+  const [view, setView] = useState<'student' | 'teacher'>('student');
   const slotTeamIds: Record<number, string> = { 1: 'team1', 2: 'team2', 3: 'team3', 4: 'team4' };
   const [busy, setBusy] = useState(false);
   function handleReset() {
@@ -262,22 +264,25 @@ export function RehearsalOverlay({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={handleAutoFill}
-              disabled={busy}
+              disabled={busy || session.status === 'PAUSED'}
               className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50"
             >
               예시로 자동 채우기
             </button>
           )}
-          {phaseActionLabel[session.currentPhase] && (
+          {view === 'student' && phaseActionLabel[session.currentPhase] && (
             <button
               type="button"
               onClick={handlePhaseAction}
-              disabled={busy || !canAdvance}
+              disabled={busy || !canAdvance || session.status === 'PAUSED'}
               className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:bg-slate-300 disabled:shadow-none"
             >
               {phaseActionLabel[session.currentPhase]}
             </button>
           )}
+          <button type="button" onClick={handleReset} disabled={busy} className="btn-secondary">
+            리허설 초기화
+          </button>
           <button
             type="button"
             onClick={handleClose}
@@ -292,7 +297,15 @@ export function RehearsalOverlay({ onClose }: { onClose: () => void }) {
         연습용 공간입니다. 실제 수업과 학생 기록에는 반영되지 않으며, 닫으면 연습 내용이 사라집니다.
       </p>
       <div className="flex shrink-0 flex-wrap gap-2 border-b border-slate-100 bg-white px-8 py-3">
-        {sortedSlots.map((slot) => {
+        <div role="group" aria-label="미리보기 화면" className="mr-3 flex gap-1 rounded-xl bg-slate-100 p-1">
+          {(['student', 'teacher'] as const).map((target) => (
+            <button key={target} type="button" aria-pressed={view === target} onClick={() => setView(target)}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold ${view === target ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+              {target === 'student' ? '학생 화면' : '교사 대시보드'}
+            </button>
+          ))}
+        </div>
+        {view === 'student' && sortedSlots.map((slot) => {
           const team = teams[slotTeamIds[slot] ?? ''];
           return (
             <button
@@ -309,11 +322,12 @@ export function RehearsalOverlay({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
+        {view === 'teacher' && <TeacherDashboard key={sessionId} rehearsalSessionId={sessionId} />}
         {SLOTS.map((slot) => {
           const teamId = slotTeamIds[slot];
           const ready = teamId && teams[teamId];
           return (
-            <div key={sessionId + slot} className={slot === activeSlot ? 'h-full' : 'hidden'}>
+            <div key={sessionId + slot} className={view === 'student' && slot === activeSlot ? 'h-full' : 'hidden'}>
               {ready ? (
                 <PreviewPane
                   sessionId={sessionId}

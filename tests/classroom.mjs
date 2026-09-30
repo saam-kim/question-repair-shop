@@ -61,7 +61,7 @@ try {
     if (!process.env.SCREENSHOTS) return;
     await mkdir('.dorms-check/private/design', { recursive: true });
     await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({ path: `.dorms-check/private/design/${name}.png`, fullPage: true });
+    await page.screenshot({ path: `.dorms-check/private/design/${name}.png`, fullPage: !name.startsWith('rehearsal-') });
   };
   const noOverflow = async () =>
     assert.equal(
@@ -85,6 +85,12 @@ try {
   await page.getByRole('heading', { name: '곧 활동이 시작됩니다', exact: true }).waitFor();
   await button('질문 만들기 시작').click();
   await page.getByLabel('조사 주제').filter({ visible: true }).fill('초기화할 입력');
+  await button('교사 대시보드').click();
+  const rehearsalDialog = page.getByRole('dialog', { name: '수업 리허설' });
+  await rehearsalDialog.getByRole('heading', { name: '우리 반의 질문이 만들어지고 있어요' }).waitFor();
+  assert.equal(await rehearsalDialog.getByRole('button', { name: /학생 초대/ }).isDisabled(), true);
+  await button('학생 화면').click();
+  assert.equal(await page.getByLabel('조사 주제').filter({ visible: true }).inputValue(), '초기화할 입력');
   await button('리허설 처음부터').filter({ visible: true }).click();
   await page.getByRole('heading', { name: '곧 활동이 시작됩니다', exact: true }).waitFor();
   await button('질문 만들기 시작').click();
@@ -100,6 +106,35 @@ try {
     await button(name).click();
     assert.equal(await page.getByLabel('조사 주제').filter({ visible: true }).inputValue(), '');
   }
+  await button('교사 대시보드').click();
+  await button('예시로 자동 채우기').click();
+  const rehearsalDashboard = rehearsalDialog.locator('.workspace');
+  await rehearsalDashboard.getByRole('button', { name: /1조 · 연두/ }).click();
+  await rehearsalDashboard.getByText('조사 주제:', { exact: false }).waitFor();
+  assert.equal(await rehearsalDashboard.locator('.stat').nth(1).locator('strong').innerText(), '4/ 4');
+  await snapshot('rehearsal-teacher-desktop');
+  await button('일시정지').click();
+  await button('학생 화면').click();
+  await page.getByText('잠시, 선생님에게 집중해주세요', { exact: true }).filter({ visible: true }).waitFor();
+  await button('교사 대시보드').click();
+  await button('활동 재개').click();
+  await button('응답 배정하고 시작하기').click();
+  await rehearsalDashboard.getByRole('heading', { name: '서로의 질문에 답하는 시간' }).waitFor();
+  await button('예시로 자동 채우기').click();
+  assert.match(await rehearsalDashboard.locator('.stat').nth(2).innerText(), /4/);
+  await button('피드백 확인 단계로').click();
+  await button('질문 수리 시작').click();
+  await button('예시로 자동 채우기').click();
+  await button('전체 결과 보기').click();
+  await rehearsalDashboard.getByRole('heading', { name: '작은 수정이 만든 변화를 나눠보세요' }).waitFor();
+  await snapshot('rehearsal-teacher-results');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noOverflow();
+  await snapshot('rehearsal-teacher-mobile');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await button('리허설 초기화').click();
+  await rehearsalDialog.getByRole('heading', { name: '학생들을 초대해주세요' }).waitFor();
+  assert.equal(await rehearsalDialog.locator('.stat').nth(1).locator('strong').innerText(), '0/ 4');
   await button('닫기').click();
   assert.equal(await page.evaluate(() => JSON.stringify(window.classroom.data)), classroomBefore);
   assert.equal(await page.evaluate(() => window.classroom.calls.length), callsBefore);

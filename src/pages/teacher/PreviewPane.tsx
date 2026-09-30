@@ -27,7 +27,7 @@ export function PreviewPane({
       className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm ${fill ? 'h-full' : 'h-[640px]'}`}
     >
       <div className="flex h-full flex-col">
-        {session.status === 'PAUSED' && <PausedOverlay />}
+        {session.status === 'PAUSED' && <PausedOverlay contained />}
         <div className="flex items-center justify-between border-b border-amber-100 bg-amber-50 px-4 py-1.5 text-xs font-medium text-amber-700">
           <span>학생 화면 미리보기 · 연습용 조</span>
           <button type="button" onClick={onReset} className="underline hover:text-amber-900">

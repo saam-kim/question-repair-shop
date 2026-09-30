@@ -27,29 +27,32 @@ import { alternateNetworkModeUrl, isSchoolNetworkMode } from '../../lib/networkM
 import { ClassGuide } from '../../components/ClassGuide';
 import { respondingStatus } from '../../lib/teamStatus';
 import { StudentJoinShareDialog } from '../../components/StudentJoinShareDialog';
+import { isRehearsal } from '../../lib/rehearsalStore';
 
 const RehearsalOverlay = lazy(() =>
   import('./RehearsalOverlay').then((m) => ({ default: m.RehearsalOverlay })),
 );
 
-export function TeacherDashboard() {
-  const { sessionId = '' } = useParams();
+export function TeacherDashboard({ rehearsalSessionId }: { rehearsalSessionId?: string }) {
+  const { sessionId: routeSessionId = '' } = useParams();
+  const rehearsal = Boolean(rehearsalSessionId && isRehearsal(rehearsalSessionId));
+  const sessionId = rehearsal ? rehearsalSessionId! : routeSessionId;
   const navigate = useNavigate();
   const location = useLocation();
   const { uid, error: authError } = useAnonAuth();
-  const { data, loading, error: sessionError } = useSession(uid ? sessionId : null, true, uid);
+  const { data, loading, error: sessionError } = useSession(rehearsal || uid ? sessionId : null, true, rehearsal ? undefined : uid);
   const [busy, setBusy] = useState(false);
   const [showRehearsal, setShowRehearsal] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [showStudentJoinInfo, setShowStudentJoinInfo] = useState(() =>
-    Boolean((location.state as { showStudentJoinInfo?: boolean } | null)?.showStudentJoinInfo),
+    !rehearsal && Boolean((location.state as { showStudentJoinInfo?: boolean } | null)?.showStudentJoinInfo),
   );
 
   useEffect(() => {
-    if (belongsToThisBrowser(data?.session.teacherUid, uid)) teacherStorage.write({ sessionId });
-  }, [data, sessionId, uid]);
+    if (!rehearsal && belongsToThisBrowser(data?.session.teacherUid, uid)) teacherStorage.write({ sessionId });
+  }, [data, sessionId, uid, rehearsal]);
 
-  if (authError || sessionError)
+  if ((!rehearsal && authError) || sessionError)
     return (
       <div className="mx-auto max-w-xl px-6 py-20">
         <Notice>수업에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.</Notice>
@@ -62,9 +65,10 @@ export function TeacherDashboard() {
       </div>
     );
 
-  if (!uid || loading) return <LoadingScreen />;
+  if ((!rehearsal && !uid) || loading) return <LoadingScreen />;
 
   if (!data) {
+    if (rehearsal) return <LoadingScreen />;
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
         <p className="text-slate-600">수업을 찾을 수 없습니다.</p>
@@ -95,7 +99,7 @@ export function TeacherDashboard() {
       </div>
     );
 
-  if (!belongsToThisBrowser(data.session.teacherUid, uid))
+  if (!rehearsal && !belongsToThisBrowser(data.session.teacherUid, uid))
     return (
       <div className="mx-auto max-w-xl px-6 py-20">
         <Notice>수업을 만든 브라우저에서만 교사 화면을 열 수 있습니다.</Notice>
@@ -287,7 +291,7 @@ export function TeacherDashboard() {
     <div className="workspace pb-12">
       <header className="workspace-header">
         <div className="workspace-header-inner">
-          <Brand />
+          <Brand linked={!rehearsal} />
           <div className="teacher-controls flex flex-wrap items-center gap-2">
             <span className="mr-2 flex items-center gap-2 text-xs text-slate-500">
               <span className="status-dot text-blue-500" />
@@ -301,6 +305,7 @@ export function TeacherDashboard() {
               <>
                 <button
                   type="button"
+                  disabled={rehearsal}
                   onClick={() => setShowStudentJoinInfo(true)}
                   className="btn-secondary"
                 >
@@ -341,13 +346,13 @@ export function TeacherDashboard() {
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">{phaseCopy[1]}</p>
           </div>
-          <div className="dashboard-preview-tools ml-auto flex flex-col items-end gap-1">
+          {!rehearsal && <div className="dashboard-preview-tools ml-auto flex flex-col items-end gap-1">
             <button type="button" onClick={() => setShowRehearsal(true)} className="btn-secondary border-blue-200 text-blue-700">
               <Icon name="book" />
               학생 화면 미리보기 · 리허설
             </button>
             <ConnectionStatus />
-          </div>
+          </div>}
         </div>
         <div className="surface p-4 sm:p-6">
           <PhaseIndicator currentPhase={session.currentPhase} />
@@ -461,7 +466,7 @@ export function TeacherDashboard() {
               <Icon name="download" className="h-4 w-4" />
               엑셀용 CSV 내려받기
             </button>
-            {session.status === 'ENDED' && (
+            {session.status === 'ENDED' && !rehearsal && (
               <button
                 className="btn-secondary text-rose-700"
                 disabled={busy}
@@ -472,9 +477,9 @@ export function TeacherDashboard() {
             )}
           </div>
         </section>
-        <div className="mt-6">
+        {!rehearsal && <div className="mt-6">
           <ClassGuide />
-        </div>
+        </div>}
       </main>
       {showRehearsal && (
         <Suspense fallback={<LoadingScreen />}>
