@@ -439,7 +439,7 @@ export function TeacherDashboard({ rehearsalSessionId }: { rehearsalSessionId?: 
             </div>
           </section>
         )}
-        {(session.currentPhase === 'RESULT' || session.currentPhase === 'ENDED') && (
+        {['FEEDBACK_REVIEW', 'REVISION', 'RESULT', 'ENDED'].includes(session.currentPhase) && (
           <TeacherResults teams={teams} />
         )}
         <section className="surface mt-6 flex flex-wrap items-center justify-between gap-4 p-5">
